@@ -7,4 +7,5 @@ import java.util.List;
 
 public interface FileRepository extends JpaRepository<FileEntity, Long> {
     List<FileEntity> findByUser(String user);
+    List<FileEntity> findByUserAndFolder(String user, String folder);
 }

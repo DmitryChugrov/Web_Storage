@@ -14,7 +14,9 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.List;
 
 @Controller
@@ -25,25 +27,31 @@ public class FileController {
     private FileService fileService;
 
     @GetMapping
-    public String listFiles(@RequestParam("user") String user, Model model) {
-        List<FileEntity> files = fileService.getFilesByUser(user);
+    public String listFiles(Model model, @RequestParam("user") String user, @RequestParam(value = "folder", required = false) String folder) {
+        List<FileEntity> files = folder == null ? fileService.getFilesByUser(user) : fileService.getFilesByUserAndFolder(user, folder);
         model.addAttribute("files", files);
         model.addAttribute("user", user);
+        model.addAttribute("folder", folder);
         return "file_list";
     }
-
     @PostMapping("/upload")
-    public String uploadFile(@RequestParam("user") String user, @RequestParam("file") MultipartFile file, Model model) {
+    public String uploadFile(@RequestParam("user") String user, @RequestParam("file") MultipartFile file, @RequestParam(value = "folder", required = false) String folder, Model model) {
         try {
-            System.out.println("Received request to upload file for user: " + user);
-            fileService.saveFile(user, file);
+            System.out.println("Received request to upload file for user: " + user + " in folder: " + folder);
+            fileService.saveFile(user, file, folder);
             System.out.println("File uploaded successfully.");
         } catch (IOException e) {
             e.printStackTrace();
         }
-        return "redirect:/files?user=" + user;
+        return "redirect:/files?user=" + user + (folder != null ? "&folder=" + folder : "");
     }
 
+    @PostMapping("/createFolder")
+    public String createFolder(@RequestParam("user") String user,
+                               @RequestParam("folderName") String folderName) {
+        fileService.createFolder(user, folderName);
+        return "redirect:/files?user=" + user;
+    }
 
     @GetMapping("/download/{fileId}")
     public ResponseEntity<Resource> downloadFile(@PathVariable Long fileId) throws IOException {

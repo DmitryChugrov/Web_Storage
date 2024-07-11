@@ -12,8 +12,16 @@ public class FileEntity {
     private String user;
     @Column(name = "file_name", nullable = false)
     private String fileName;
+    @Column(name = "folder", nullable = false)
+    private String folder;
     @Column(name = "file_path", nullable = false)
     private String filePath;
+
+    @Column(name = "file_type", nullable = false)
+    private String fileType;
+
+    @Column(name = "file_size", nullable = false)
+    private long fileSize;
 
     public Long getId() {
         return id;
@@ -45,6 +53,30 @@ public class FileEntity {
 
     public void setFilePath(String filePath) {
         this.filePath = filePath;
+    }
+
+    public String getFileType() {
+        return fileType;
+    }
+
+    public void setFileType(String fileType) {
+        this.fileType = fileType;
+    }
+
+    public long getFileSize() {
+        return fileSize;
+    }
+
+    public void setFileSize(long fileSize) {
+        this.fileSize = fileSize;
+    }
+
+    public String getFolder() {
+        return folder;
+    }
+
+    public void setFolder(String folder) {
+        this.folder = folder;
     }
 }
 

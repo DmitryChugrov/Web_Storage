@@ -25,18 +25,24 @@ public class FileService {
     public List<FileEntity> getFilesByUser(String user) {
         return fileRepository.findByUser(user);
     }
+    public List<FileEntity> getFilesByUserAndFolder(String user, String folder) {
+        return fileRepository.findByUserAndFolder(user, folder);
+    }
 
-    public void saveFile(String user, MultipartFile file) throws IOException {
+    public void saveFile(String user, MultipartFile file, String folder) throws IOException {
         if (Files.notExists(rootLocation)) {
             Files.createDirectories(rootLocation);
         }
 
-        Path destinationFile = rootLocation.resolve(
-                        Paths.get(file.getOriginalFilename()))
-                .normalize().toAbsolutePath();
+        Path destinationFolder = (folder != null && !folder.isEmpty()) ? rootLocation.resolve(folder) : rootLocation;
+        if (Files.notExists(destinationFolder)) {
+            Files.createDirectories(destinationFolder);
+        }
 
-        // Проверка на безопасность пути
-        if (!destinationFile.getParent().equals(rootLocation.toAbsolutePath())) {
+        Path destinationFile = destinationFolder.resolve(
+                Paths.get(file.getOriginalFilename())).normalize().toAbsolutePath();
+
+        if (!destinationFile.getParent().equals(destinationFolder.toAbsolutePath())) {
             throw new IOException("Не удается сохранить файл за пределами текущего каталога.");
         }
 
@@ -47,9 +53,22 @@ public class FileService {
         FileEntity fileEntity = new FileEntity();
         fileEntity.setFileName(file.getOriginalFilename());
         fileEntity.setFilePath(destinationFile.toString());
+        fileEntity.setFileSize(file.getSize());
+        fileEntity.setFileType(file.getContentType());
         fileEntity.setUser(user);
+        fileEntity.setFolder(folder);
 
         fileRepository.save(fileEntity);
+    }
+    public void createFolder(String user, String folderName) {
+        Path userFolder = rootLocation.resolve(user).resolve(folderName);
+        try {
+            if (Files.notExists(userFolder)) {
+                Files.createDirectories(userFolder);
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
     public Path getFilePath(Long fileId) throws IOException {
         Optional<FileEntity> fileEntityOptional = fileRepository.findById(fileId);
