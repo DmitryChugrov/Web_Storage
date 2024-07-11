@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>File Storage</title>
+</head>
+<body>
+<h1>File Storage</h1>
+
+<!-- Вывод значения user для проверки -->
+<p>User: <span th:text="${user}"></span></p>
+
+<form method="post" enctype="multipart/form-data" th:action="@{/files/upload}">
+    <input type="hidden" name="user" th:value="${user}" />
+    <input type="file" name="file" />
+    <button type="submit">Upload</button>
+</form>
+
+<h2>Files</h2>
+<ul>
+    <li th:each="file : ${files}">
+        <a th:href="@{/files/download/{id}(id=${file.id})}" th:text="${file.fileName}"></a>
+    </li>
+</ul>
+</body>
+</html>
