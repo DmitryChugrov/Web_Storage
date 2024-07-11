@@ -8,19 +8,20 @@ public class FileEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-    @Column(name = "user", nullable = false)
-    private String user;
-    @Column(name = "file_name", nullable = false)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", nullable = false)
+    private UserEntity user;
+    @Column(name = "file_name")
     private String fileName;
-    @Column(name = "folder", nullable = false)
+    @Column(name = "folder")
     private String folder;
-    @Column(name = "file_path", nullable = false)
+    @Column(name = "file_path")
     private String filePath;
 
-    @Column(name = "file_type", nullable = false)
+    @Column(name = "file_type")
     private String fileType;
 
-    @Column(name = "file_size", nullable = false)
+    @Column(name = "file_size")
     private long fileSize;
 
     public Long getId() {
@@ -31,11 +32,11 @@ public class FileEntity {
         this.id = id;
     }
 
-    public String getUser() {
+    public UserEntity getUser() {
         return user;
     }
 
-    public void setUser(String user) {
+    public void setUser(UserEntity user) {
         this.user = user;
     }
 

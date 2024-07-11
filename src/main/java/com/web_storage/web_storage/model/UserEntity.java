@@ -6,9 +6,10 @@ public class UserEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-    @Column(name = "user", nullable = false)
+
+    @Column(name = "username")
     private String username;
-    @Column(name = "password", nullable = false)
+    @Column(name = "password")
     private String password;
 
     public Long getId() {

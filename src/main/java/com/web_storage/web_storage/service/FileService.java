@@ -1,10 +1,12 @@
 package com.web_storage.web_storage.service;
 
 import com.web_storage.web_storage.model.FileEntity;
+import com.web_storage.web_storage.model.UserEntity;
 import com.web_storage.web_storage.repository.FileRepository;
-import jakarta.transaction.Transactional;
+import com.web_storage.web_storage.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
@@ -23,27 +25,49 @@ public class FileService {
     @Autowired
     private FileRepository fileRepository;
 
-    public List<FileEntity> getFilesByUser(String user) {
-        return fileRepository.findByUser(user);
+    @Autowired
+    private UserRepository userRepository;
+
+    public List<FileEntity> getFilesByUser(UserEntity username) {
+        UserEntity user = userRepository.findByUsername(username.getUsername());
+        if (user != null) {
+            return fileRepository.findByUser(user);
+        }
+        return null;
     }
 
-    public void saveFile(String user, String folder, MultipartFile file) throws IOException {
+    public List<FileEntity> getFilesByUserAndFolder(UserEntity username, String folder) {
+        UserEntity user = userRepository.findByUsername(username.getUsername());
+        if (user != null) {
+            return fileRepository.findByUserAndFolder(user, folder);
+        }
+        return null;
+    }
+
+    public void saveFile(UserEntity username, String folder, MultipartFile file) throws IOException {
+        UserEntity user = userRepository.findByUsername(username.getUsername());
+        if (user == null) {
+            throw new IOException("User not found.");
+        }
+
         if (Files.notExists(rootLocation)) {
             Files.createDirectories(rootLocation);
         }
 
-        Path userFolder = rootLocation.resolve(user);
+        Path userFolder = rootLocation.resolve(username.getUsername());
         if (Files.notExists(userFolder)) {
             Files.createDirectories(userFolder);
+        }
+        if (folder == null || folder.isEmpty()) {
+            throw new IOException("Folder cannot be empty.");
         }
 
         Path folderPath = userFolder.resolve(folder);
         if (!folder.isEmpty() && Files.notExists(folderPath)) {
-            throw new IOException("Folder does not exist.");
+            Files.createDirectories(folderPath);
         }
 
-        Path destinationFile = folderPath.resolve(
-                        Paths.get(file.getOriginalFilename()))
+        Path destinationFile = folderPath.resolve(Paths.get(file.getOriginalFilename()))
                 .normalize().toAbsolutePath();
 
         if (!destinationFile.getParent().equals(folderPath.toAbsolutePath())) {
@@ -59,13 +83,19 @@ public class FileService {
         fileEntity.setFilePath(destinationFile.toString());
         fileEntity.setFileSize(file.getSize());
         fileEntity.setFileType(Files.probeContentType(destinationFile));
+        fileEntity.setFolder(folder);
         fileEntity.setUser(user);
 
         fileRepository.save(fileEntity);
     }
 
-    public boolean createFolder(String user, String folderName) {
-        Path userFolder = rootLocation.resolve(user);
+    public boolean createFolder(UserEntity username, String folderName) {
+        UserEntity user = userRepository.findByUsername(username.getUsername());
+        if (user == null) {
+            return false;
+        }
+
+        Path userFolder = rootLocation.resolve(username.getUsername());
         if (Files.notExists(userFolder)) {
             try {
                 Files.createDirectories(userFolder);

@@ -15,8 +15,8 @@ public class DataLoader implements CommandLineRunner {
     @Override
     public void run(String... args) throws Exception {
         UserEntity adminUser = new UserEntity();
-        adminUser.setUsername("admin");
-        adminUser.setPassword("password");
-        userService.saveUser(adminUser);
+//        adminUser.setUsername("admin");
+//        adminUser.setPassword("1111");
+//        userService.saveUser(adminUser);
     }
 }

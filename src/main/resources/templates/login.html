@@ -5,18 +5,23 @@
 </head>
 <body>
 <h1>Login</h1>
-<form th:action="@{/login}" method="post">
+
+<form method="post" th:action="@{/login}">
     <div>
         <label for="username">Username:</label>
-        <input type="text" id="username" name="username"/>
+        <input type="text" id="username" name="username" />
     </div>
     <div>
         <label for="password">Password:</label>
-        <input type="password" id="password" name="password"/>
+        <input type="password" id="password" name="password" />
     </div>
     <div>
         <button type="submit">Login</button>
     </div>
+    <div th:if="${errorMessage}">
+        <p th:text="${errorMessage}" style="color: red;"></p>
+    </div>
 </form>
+
 </body>
 </html>

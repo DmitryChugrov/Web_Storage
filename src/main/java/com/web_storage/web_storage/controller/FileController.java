@@ -1,6 +1,8 @@
 package com.web_storage.web_storage.controller;
 
 import com.web_storage.web_storage.model.FileEntity;
+import com.web_storage.web_storage.model.UserEntity;
+import com.web_storage.web_storage.repository.UserRepository;
 import com.web_storage.web_storage.service.FileService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.Resource;
@@ -17,7 +19,6 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.List;
-
 @Controller
 @RequestMapping("/files")
 public class FileController {
@@ -25,12 +26,16 @@ public class FileController {
     @Autowired
     private FileService fileService;
 
+    @Autowired
+    private UserRepository userRepository;
+
     @GetMapping
     public String listFiles(Model model, Authentication authentication) {
         String username = ((UserDetails) authentication.getPrincipal()).getUsername();
-        List<FileEntity> files = fileService.getFilesByUser(username);
+        UserEntity user = userRepository.findByUsername(username);
+        List<FileEntity> files = fileService.getFilesByUser(user);
         model.addAttribute("files", files);
-        model.addAttribute("user", username);
+        model.addAttribute("user", user);
         return "file_list";
     }
 
@@ -39,8 +44,9 @@ public class FileController {
                              @RequestParam("file") MultipartFile file,
                              Authentication authentication) {
         String username = ((UserDetails) authentication.getPrincipal()).getUsername();
+        UserEntity user = userRepository.findByUsername(username);
         try {
-            fileService.saveFile(username, folder, file);
+            fileService.saveFile(user, folder, file);
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -51,7 +57,8 @@ public class FileController {
     public String createFolder(@RequestParam("folderName") String folderName,
                                Authentication authentication) {
         String username = ((UserDetails) authentication.getPrincipal()).getUsername();
-        if (!fileService.createFolder(username, folderName)) {
+        UserEntity user = userRepository.findByUsername(username);
+        if (!fileService.createFolder(user, folderName)) {
             return "error";
         }
         return "redirect:/files";
