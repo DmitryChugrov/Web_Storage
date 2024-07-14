@@ -1,6 +1,5 @@
 package com.web_storage.web_storage.controller;
 
-
 import com.web_storage.web_storage.model.FileEntity;
 import com.web_storage.web_storage.service.FileService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -8,15 +7,15 @@ import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
-import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.List;
 
 @Controller
@@ -27,30 +26,35 @@ public class FileController {
     private FileService fileService;
 
     @GetMapping
-    public String listFiles(Model model, @RequestParam("user") String user, @RequestParam(value = "folder", required = false) String folder) {
-        List<FileEntity> files = folder == null ? fileService.getFilesByUser(user) : fileService.getFilesByUserAndFolder(user, folder);
+    public String listFiles(Model model, Authentication authentication) {
+        String username = ((UserDetails) authentication.getPrincipal()).getUsername();
+        List<FileEntity> files = fileService.getFilesByUser(username);
         model.addAttribute("files", files);
-        model.addAttribute("user", user);
-        model.addAttribute("folder", folder);
+        model.addAttribute("user", username);
         return "file_list";
     }
+
     @PostMapping("/upload")
-    public String uploadFile(@RequestParam("user") String user, @RequestParam("file") MultipartFile file, @RequestParam(value = "folder", required = false) String folder, Model model) {
+    public String uploadFile(@RequestParam("folder") String folder,
+                             @RequestParam("file") MultipartFile file,
+                             Authentication authentication) {
+        String username = ((UserDetails) authentication.getPrincipal()).getUsername();
         try {
-            System.out.println("Received request to upload file for user: " + user + " in folder: " + folder);
-            fileService.saveFile(user, file, folder);
-            System.out.println("File uploaded successfully.");
+            fileService.saveFile(username, folder, file);
         } catch (IOException e) {
             e.printStackTrace();
         }
-        return "redirect:/files?user=" + user + (folder != null ? "&folder=" + folder : "");
+        return "redirect:/files";
     }
 
     @PostMapping("/createFolder")
-    public String createFolder(@RequestParam("user") String user,
-                               @RequestParam("folderName") String folderName) {
-        fileService.createFolder(user, folderName);
-        return "redirect:/files?user=" + user;
+    public String createFolder(@RequestParam("folderName") String folderName,
+                               Authentication authentication) {
+        String username = ((UserDetails) authentication.getPrincipal()).getUsername();
+        if (!fileService.createFolder(username, folderName)) {
+            return "error";
+        }
+        return "redirect:/files";
     }
 
     @GetMapping("/download/{fileId}")
@@ -64,4 +68,3 @@ public class FileController {
                 .body(resource);
     }
 }
-

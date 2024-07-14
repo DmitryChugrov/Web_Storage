@@ -22,28 +22,32 @@ public class FileService {
 
     @Autowired
     private FileRepository fileRepository;
+
     public List<FileEntity> getFilesByUser(String user) {
         return fileRepository.findByUser(user);
     }
-    public List<FileEntity> getFilesByUserAndFolder(String user, String folder) {
-        return fileRepository.findByUserAndFolder(user, folder);
-    }
 
-    public void saveFile(String user, MultipartFile file, String folder) throws IOException {
+    public void saveFile(String user, String folder, MultipartFile file) throws IOException {
         if (Files.notExists(rootLocation)) {
             Files.createDirectories(rootLocation);
         }
 
-        Path destinationFolder = (folder != null && !folder.isEmpty()) ? rootLocation.resolve(folder) : rootLocation;
-        if (Files.notExists(destinationFolder)) {
-            Files.createDirectories(destinationFolder);
+        Path userFolder = rootLocation.resolve(user);
+        if (Files.notExists(userFolder)) {
+            Files.createDirectories(userFolder);
         }
 
-        Path destinationFile = destinationFolder.resolve(
-                Paths.get(file.getOriginalFilename())).normalize().toAbsolutePath();
+        Path folderPath = userFolder.resolve(folder);
+        if (!folder.isEmpty() && Files.notExists(folderPath)) {
+            throw new IOException("Folder does not exist.");
+        }
 
-        if (!destinationFile.getParent().equals(destinationFolder.toAbsolutePath())) {
-            throw new IOException("Не удается сохранить файл за пределами текущего каталога.");
+        Path destinationFile = folderPath.resolve(
+                        Paths.get(file.getOriginalFilename()))
+                .normalize().toAbsolutePath();
+
+        if (!destinationFile.getParent().equals(folderPath.toAbsolutePath())) {
+            throw new IOException("Cannot store file outside of current directory.");
         }
 
         try (var inputStream = file.getInputStream()) {
@@ -54,28 +58,43 @@ public class FileService {
         fileEntity.setFileName(file.getOriginalFilename());
         fileEntity.setFilePath(destinationFile.toString());
         fileEntity.setFileSize(file.getSize());
-        fileEntity.setFileType(file.getContentType());
+        fileEntity.setFileType(Files.probeContentType(destinationFile));
         fileEntity.setUser(user);
-        fileEntity.setFolder(folder);
 
         fileRepository.save(fileEntity);
     }
-    public void createFolder(String user, String folderName) {
-        Path userFolder = rootLocation.resolve(user).resolve(folderName);
-        try {
-            if (Files.notExists(userFolder)) {
+
+    public boolean createFolder(String user, String folderName) {
+        Path userFolder = rootLocation.resolve(user);
+        if (Files.notExists(userFolder)) {
+            try {
                 Files.createDirectories(userFolder);
+            } catch (IOException e) {
+                e.printStackTrace();
+                return false;
             }
+        }
+
+        Path newFolder = userFolder.resolve(folderName);
+        if (Files.exists(newFolder)) {
+            return false;
+        }
+
+        try {
+            Files.createDirectory(newFolder);
+            return true;
         } catch (IOException e) {
             e.printStackTrace();
+            return false;
         }
     }
+
     public Path getFilePath(Long fileId) throws IOException {
         Optional<FileEntity> fileEntityOptional = fileRepository.findById(fileId);
         if (fileEntityOptional.isPresent()) {
             return Paths.get(fileEntityOptional.get().getFilePath());
         } else {
-            throw new IOException("Файл с идентификатором " + fileId + " не найден.");
+            throw new IOException("File with ID " + fileId + " not found.");
         }
     }
 }

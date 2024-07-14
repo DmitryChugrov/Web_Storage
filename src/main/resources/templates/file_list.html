@@ -27,8 +27,7 @@
         <a th:href="@{/files/download/{id}(id=${file.id})}">
             <span th:text="${file.fileName}"></span> -
             <span th:text="'User: ' + ${file.user}"></span> -
-            <span th:text="'Size: ' + ${file.fileSize} + ' bytes'"></span> -
-            <span th:text="'Folder: ' + (${file.folder} == null ? 'Root' : ${file.folder})"></span>
+            <span th:text="'Size: ' + ${file.fileSize} + ' bytes'"></span>
         </a>
     </li>
 </ul>
