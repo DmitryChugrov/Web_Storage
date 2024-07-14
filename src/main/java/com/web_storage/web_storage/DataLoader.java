@@ -1,0 +1,22 @@
+package com.web_storage.web_storage;
+
+import com.web_storage.web_storage.model.UserEntity;
+import com.web_storage.web_storage.service.UserService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.CommandLineRunner;
+import org.springframework.stereotype.Component;
+
+@Component
+public class DataLoader implements CommandLineRunner {
+
+    @Autowired
+    private UserService userService;
+
+    @Override
+    public void run(String... args) throws Exception {
+        UserEntity adminUser = new UserEntity();
+        adminUser.setUsername("admin");
+        adminUser.setPassword("password");
+        userService.saveUser(adminUser);
+    }
+}
