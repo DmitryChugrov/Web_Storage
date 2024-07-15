@@ -1,5 +1,6 @@
 package com.web_storage.web_storage.config;
 
+import com.web_storage.web_storage.security.CustomAuthenticationSuccessHandler;
 import com.web_storage.web_storage.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
@@ -32,7 +33,7 @@ public class SecurityConfig {
                 .formLogin(formLogin ->
                         formLogin
                                 .loginPage("/login")
-                                .defaultSuccessUrl("/files", true)
+                                .successHandler(new CustomAuthenticationSuccessHandler())  // Используем кастомный хендлер
                                 .failureUrl("/login?error=true")
                                 .permitAll()
                 )

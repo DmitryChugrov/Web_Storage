@@ -1,35 +1,69 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
 <head>
-    <title>File Storage</title>
+    <meta charset="UTF-8">
+    <title>Файловое хранилище</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css"
+          integrity="sha384-JcKb8q3iqJ61gNV9KGb8thSsNjpSL0n8PARn9HuZOnIxN0hoP+VmmDGMN5t9UJ0Z"
+          crossorigin="anonymous">
 </head>
 <body>
-<h1>File Storage</h1>
+<div class="container mt-5">
+    <h1 class="mb-4">Файловое хранилище</h1>
 
-<h2>Create Folder</h2>
-<form method="post" th:action="@{/files/createFolder}">
-    <input type="hidden" name="user" th:value="${user}" />
-    <input type="text" name="folderName" placeholder="Folder Name" />
-    <button type="submit">Create Folder</button>
-</form>
+    <div class="card mb-4">
+        <div class="card-body">
+            <h2 class="card-title">Создание папки</h2>
+            <form method="post" th:action="@{/files/createFolder}">
+                <div class="form-group">
+                    <input type="hidden" name="user" th:value="${user}" />
+                    <input type="text" class="form-control" name="folderName" placeholder="Имя папки" required/>
+                </div>
+                <button type="submit" class="btn btn-primary">Создать папку</button>
+            </form>
+        </div>
+    </div>
 
-<h2>Upload File</h2>
-<form method="post" enctype="multipart/form-data" th:action="@{/files/upload}">
-    <input type="hidden" name="user" th:value="${user}" />
-    <input type="text" name="folder" placeholder="Folder (optional)" />
-    <input type="file" name="file" />
-    <button type="submit">Upload</button>
-</form>
+    <div class="card mb-4">
+        <div class="card-body">
+            <h2 class="card-title">Загрузить файл</h2>
+            <form method="post" enctype="multipart/form-data" th:action="@{/files/upload}">
+                <div class="form-group">
+                    <input type="hidden" name="user" th:value="${user}" />
+                    <input type="text" class="form-control" name="folder" placeholder="Укажите имя папки" />
+                </div>
+                <div class="form-group">
+                    <input type="file" class="form-control-file" name="file" required/>
+                </div>
+                <button type="submit" class="btn btn-primary">Загрузить</button>
+            </form>
+        </div>
+    </div>
 
-<h2>Files</h2>
-<ul>
-    <li th:each="file : ${files}">
-        <a th:href="@{/files/download/{id}(id=${file.id})}">
-            <span th:text="${file.fileName}"></span> -
-            <span th:text="'User: ' + ${file.user}"></span> -
-            <span th:text="'Size: ' + ${file.fileSize} + ' bytes'"></span>
-        </a>
-    </li>
-</ul>
+    <div class="card">
+        <div class="card-body">
+            <h2 class="card-title">Файлы</h2>
+            <ul class="list-group">
+                <li th:each="file : ${files}" class="list-group-item">
+                    <a th:href="@{/files/download/{id}(id=${file.id})}">
+                        <span th:text="${file.fileName}"></span></a>
+                    <p class="file-info">
+                        <span th:text="'Пользователь: ' + ${file.user}"></span> <br/>
+                        <span th:text="'Размер: ' + ${file.fileSize} + ' bytes'"></span><br/></p>
+                </li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+<script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"
+        integrity="sha384-DfXdz2htPH0lsSSs5nCTpuj/zy4C+OGpamoFVy38MVBnE+IbbVYUew+OrCXaRkfj"
+        crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.4/dist/umd/popper.min.js"
+        integrity="sha384-SWEk+x0j3E2+9XLq+GNInFLiYETfphCnx2MC6F1fqltU/kKmBfmgB2AtX1HF7JX1"
+        crossorigin="anonymous"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"
+        integrity="sha384-B4gt1jrGC7Jh4AgTPSdUtOBvfO8sh/jFc5tx0Bm8zFZ8nY2t6m2j21gmgJN7Jqnv"
+        crossorigin="anonymous"></script>
 </body>
 </html>
