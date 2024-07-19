@@ -1,5 +1,4 @@
 package com.web_storage.web_storage.model;
-
 import jakarta.persistence.*;
 
 @Entity
@@ -11,19 +10,30 @@ public class FileEntity {
 
     @Column(name = "user_name", nullable = false)
     private String user;
-    @Column(name = "file_name")
+
+    @Column(name = "path_folder")
+    private String pathFolder;
+    @Transient
     private String fileName;
-    @Column(name = "folder")
-    private String folder;
-    @Column(name = "file_path")
+
+    @Transient
     private String filePath;
 
-    @Column(name = "file_type")
+    @Transient
     private String fileType;
 
-    @Column(name = "file_size")
-    private long fileSize;
+    @Transient
+    private Long fileSize;
 
+    public FileEntity() {
+    }
+
+    public FileEntity(String user, String pathFolder) {
+        this.user = user;
+        this.pathFolder = pathFolder;
+    }
+
+    // Getters and setters
     public Long getId() {
         return id;
     }
@@ -40,6 +50,13 @@ public class FileEntity {
         this.user = user;
     }
 
+    public String getPathFolder() {
+        return pathFolder;
+    }
+
+    public void setPathFolder(String pathFolder) {
+        this.pathFolder = pathFolder;
+    }
     public String getFileName() {
         return fileName;
     }
@@ -64,32 +81,11 @@ public class FileEntity {
         this.fileType = fileType;
     }
 
-    public long getFileSize() {
+    public Long getFileSize() {
         return fileSize;
     }
 
-    public void setFileSize(long fileSize) {
+    public void setFileSize(Long fileSize) {
         this.fileSize = fileSize;
     }
-
-    public String getFolder() {
-        return folder;
-    }
-
-    public void setFolder(String folder) {
-        this.folder = folder;
-    }
-    @Override
-    public String toString() {
-        return "FileEntity{" +
-                "id=" + id +
-                ", user=" + user +
-                ", fileName='" + fileName + '\'' +
-                ", folder='" + folder + '\'' +
-                ", filePath='" + filePath + '\'' +
-                ", fileType='" + fileType + '\'' +
-                ", fileSize=" + fileSize +
-                '}';
-    }
 }
-

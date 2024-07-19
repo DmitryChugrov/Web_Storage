@@ -15,7 +15,6 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.List;
-
 @Controller
 @RequestMapping("/files")
 public class FileController {
@@ -24,8 +23,19 @@ public class FileController {
     private FileService fileService;
 
     @GetMapping
-    public String listFiles(Model model, @RequestParam("user") String user, @RequestParam(value = "folder", required = false) String folder) {
-        List<FileEntity> files = (folder == null || folder.isEmpty()) ? fileService.getFilesByUser(user) : fileService.getFilesByUserAndFolder(user, folder);
+    public String listFolders(Model model, @RequestParam("user") String user, @RequestParam(value = "folder", required = false) String folder) {
+        if (folder == null) {
+            List<String> folders = fileService.getFoldersByUser(user);
+            model.addAttribute("folders", folders);
+            model.addAttribute("user", user);
+            return "folder_list";
+        } else {
+            return listFiles(model, user, folder);
+        }
+    }
+
+    private String listFiles(Model model, String user, String folder) {
+        List<FileEntity> files = fileService.getFilesByUserAndFolder(user, folder);
         model.addAttribute("files", files);
         model.addAttribute("user", user);
         model.addAttribute("folder", folder);
@@ -33,36 +43,24 @@ public class FileController {
     }
 
     @PostMapping("/upload")
-    public String uploadFile(@RequestParam("user") String user, @RequestParam("file") MultipartFile file, @RequestParam(value = "folder", required = false) String folder) {
+    public String uploadFile(@RequestParam("user") String user, @RequestParam("file") MultipartFile file, @RequestParam("folder") String folder, Model model) {
         try {
-            System.out.println("Received request to upload file for user: " + user + " in folder: " + folder);
             fileService.saveFile(user, file, folder);
-            System.out.println("File uploaded successfully.");
         } catch (IOException e) {
             e.printStackTrace();
         }
-        return "redirect:/files?user=" + user + (folder != null ? "&folder=" + folder : "");
+        return "redirect:/files?user=" + user + "&folder=" + folder;
     }
 
     @PostMapping("/createFolder")
-    public String createFolder(@RequestParam("user") String user,
-                               @RequestParam("folderName") String folderName, Model model) {
-        try {
-            if (fileService.folderExists(user, folderName)) {
-                model.addAttribute("error", "Folder already exists");
-                return "error/folder_exists";
-            }
-            fileService.createFolder(user, folderName);
-        } catch (IllegalArgumentException e) {
-            model.addAttribute("error", "Folder already exists");
-            return "error/folder_exists";
-        }
+    public String createFolder(@RequestParam("user") String user, @RequestParam("folderName") String folderName) {
+        fileService.createFolder(user, folderName);
         return "redirect:/files?user=" + user;
     }
 
     @GetMapping("/download/{fileId}")
-    public ResponseEntity<Resource> downloadFile(@PathVariable Long fileId) throws IOException {
-        Path filePath = fileService.getFilePath(fileId);
+    public ResponseEntity<Resource> downloadFile(@PathVariable Long fileId, @RequestParam("user") String user, @RequestParam("folder") String folder) throws IOException {
+        Path filePath = fileService.getFilePath(fileId, user, folder);
         Resource resource = new UrlResource(filePath.toUri());
 
         return ResponseEntity.ok()

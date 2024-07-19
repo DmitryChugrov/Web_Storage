@@ -9,35 +9,29 @@
 </head>
 <body>
 <div class="container mt-5">
-    <h1 class="mb-4">File Storage - <span th:text="${folder}"></span></h1>
+    <h1 class="mb-4">File Storage</h1>
 
-    <!-- Upload File Form -->
+    <!-- Create Folder Form -->
     <div class="card mb-4">
         <div class="card-body">
-            <h2 class="card-title">Upload File</h2>
-            <form method="post" enctype="multipart/form-data" th:action="@{/files/upload}">
-                <input type="hidden" name="user" th:value="${user}" />
-                <input type="hidden" name="folder" th:value="${folder}" />
+            <h2 class="card-title">Create Folder</h2>
+            <form method="post" th:action="@{/files/createFolder}">
                 <div class="form-group">
-                    <input type="file" class="form-control" name="file" required/>
+                    <input type="hidden" name="user" th:value="${user}" />
+                    <input type="text" class="form-control" name="folderName" placeholder="Folder Name" required/>
                 </div>
-                <button type="submit" class="btn btn-primary">Upload</button>
+                <button type="submit" class="btn btn-primary">Create Folder</button>
             </form>
         </div>
     </div>
 
-    <!-- Files List -->
-    <div class="card mb-4" th:if="${files.size() > 0}">
+    <!-- Folders List -->
+    <div class="card mb-4" th:if="${folders.size() > 0}">
         <div class="card-body">
-            <h2 class="card-title">Files</h2>
+            <h2 class="card-title">Folders</h2>
             <ul class="list-group">
-                <li th:each="file : ${files}" class="list-group-item">
-                    <a th:href="@{'/files/download/' + ${file.id} + '?user=' + ${user} + '&folder=' + ${folder}}">
-                            <span th:text="${file.fileName}"></span>
-                    </a>
-                        <p>
-                            <span th:text="'Size: ' + ${file.fileSize} + ' bytes'"></span>
-                        </p>
+                <li th:each="folder : ${folders}" class="list-group-item">
+                    <a th:href="@{'/files?user=' + ${user} + '&folder=' + ${folder}}" th:text="${folder}"></a>
                 </li>
             </ul>
         </div>
@@ -51,7 +45,7 @@
         integrity="sha384-SWEk+x0j3E2+9XLq+GNInFLiYETfphCnx2MC6F1fqltU/kKmBfmgB2AtX1HF7JX1"
         crossorigin="anonymous"></script>
 <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"
-        integrity="sha384-B4gt1jrGC7Jh4AgTPSdUtOBvfO8sh/jFc5tx0Bm8zFZ8nY2t6m2j21gmgJNQwpXU"
+        integrity="sha384-B4gt1jrGC7Jh4AgTPSdUtOBvfO8sh/jFc5tx0Bm8zFZ8nY2t6m2j21gmgJN7Jqnv"
         crossorigin="anonymous"></script>
 </body>
 </html>
