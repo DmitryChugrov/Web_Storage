@@ -1,41 +1,62 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.w3.org/1999/xhtml">
 <head>
     <meta charset="UTF-8">
-    <title>File Storage</title>
+    <title>Хранилище</title>
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css"
           integrity="sha384-JcKb8q3iqJ61gNV9KGb8thSsNjpSL0n8PARn9HuZOnIxN0hoP+VmmDGMN5t9UJ0Z"
           crossorigin="anonymous">
 </head>
 <body>
 <div class="container mt-5">
-    <h1 class="mb-4">File Storage</h1>
+    <h1 class="mb-4">Хранилище</h1>
 
-    <!-- Create Folder Form -->
     <div class="card mb-4">
         <div class="card-body">
-            <h2 class="card-title">Create Folder</h2>
+            <h2 class="card-title">Создать папку</h2>
             <form method="post" th:action="@{/files/createFolder}">
                 <div class="form-group">
-                    <input type="hidden" name="user" th:value="${user}" />
-                    <input type="text" class="form-control" name="folderName" placeholder="Folder Name" required/>
+                    <input type="text" class="form-control" name="folderName" placeholder="Введите название папки" required/>
                 </div>
-                <button type="submit" class="btn btn-primary">Create Folder</button>
+                <button type="submit" class="btn btn-primary">Создать папку</button>
             </form>
         </div>
     </div>
 
-    <!-- Folders List -->
+    <div sec:authorize="hasRole('ROLE_OWNER')">
+        <a href="/owner/folders" class="btn btn-primary">Просмотр всех папок</a>
+    </div>
+
     <div class="card mb-4" th:if="${folders.size() > 0}">
         <div class="card-body">
-            <h2 class="card-title">Folders</h2>
+            <h2 class="card-title">Ваши папки</h2>
             <ul class="list-group">
                 <li th:each="folder : ${folders}" class="list-group-item">
-                    <a th:href="@{'/files?user=' + ${user} + '&folder=' + ${folder}}" th:text="${folder}"></a>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <a th:href="@{'/files?folder=' + ${folder}}" th:text="${folder}"></a>
+                        <form method="post" th:action="@{/files/deleteFolder}" style="display:inline;">
+                            <input type="hidden" name="folderName" th:value="${folder}"/>
+                            <button type="submit" class="btn btn-danger btn-sm">Удалить</button>
+                        </form>
+                    </div>
                 </li>
             </ul>
         </div>
     </div>
+
+    <div sec:authorize="hasRole('ROLE_OWNER')">
+        <a href="/owner/addAdmin" class="btn btn-primary">Создать администратора</a>
+    </div>
+    <div sec:authorize="hasRole('ROLE_ADMIN')">
+        <a href="/admin/addUser" class="btn btn-primary">Создать пользователя</a>
+    </div>
+    <div sec:authorize="hasRole('ROLE_OWNER')">
+        <a href="/owner/users" class="btn btn-primary">Просмотр всех пользователей</a>
+    </div>
+    <div sec:authorize="hasRole('ROLE_ADMIN')">
+        <a href="/admin/users" class="btn btn-primary">Просмотр всех пользователей</a>
+    </div>
+    <a class="btn btn-secondary" th:href="@{/login}">Выйти из профиля</a>
 </div>
 
 <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"

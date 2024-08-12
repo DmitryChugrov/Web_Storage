@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Создать пользователя</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+</head>
+<body>
+<div class="container mt-5">
+    <h1 class="mb-4">Создать пользователя</h1>
+    <form method="post" th:action="@{/admin/addUser}">
+        <div class="form-group">
+            <label for="username">Введите имя пользователя</label>
+            <input type="text" class="form-control" id="username" name="username" required>
+        </div>
+        <button type="submit" class="btn btn-primary">Создать пользователя</button>
+    </form>
+    <a class="btn btn-secondary" th:href="@{/files}">Назад</a>
+</div>
+</body>
+</html>

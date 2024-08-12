@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Создать администратора</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+</head>
+<body>
+<div class="container mt-5">
+    <h1 class="mb-4">Создать администратора</h1>
+    <form method="post" th:action="@{/owner/addAdmin}">
+        <div class="form-group">
+            <label for="username">Введите имя администратора</label>
+            <input type="text" class="form-control" id="username" name="username" required>
+        </div>
+        <button type="submit" class="btn btn-primary">Создать администратора</button>
+    </form>
+    <a class="btn btn-secondary" th:href="@{/files}">Назад</a>
+</div>
+</body>
+</html>

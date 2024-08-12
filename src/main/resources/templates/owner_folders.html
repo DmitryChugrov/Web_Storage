@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Все папки</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+</head>
+<body>
+<div class="container mt-5">
+    <h1 class="mb-4">Все папки</h1>
+    <div class="card mb-4" th:if="${folders.size() > 0}">
+        <div class="card-body">
+            <h2 class="card-title">Список папок</h2>
+            <ul class="list-group">
+                <li th:each="folderInfo : ${folders}" class="list-group-item">
+                    <a th:href="@{'/owner/folders/' + ${folderInfo.folderName}}">
+                        <span th:text="${folderInfo.folderName}"></span>
+                    </a>
+                    <p>Создатель: <span th:text="${folderInfo.owner}"></span></p>
+                    <form method="post" th:action="@{/owner/deleteFolder}" style="display:inline;">
+                        <input type="hidden" name="folderName" th:value="${folder}"/>
+                        <button type="submit" class="btn btn-danger btn-sm">Удалить папку</button>
+                    </form>
+                </li>
+            </ul>
+        </div>
+    </div>
+    <a class="btn btn-secondary" th:href="@{/files}">Назад</a>
+</div>
+</body>
+</html>

@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Пользователи</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+</head>
+<body>
+<div class="container mt-5">
+    <h1 class="mb-4">Пользователи</h1>
+    <div class="card mb-4" th:if="${users.size() > 0}">
+        <div class="card-body">
+            <h2 class="card-title">Список пользователей</h2>
+            <ul class="list-group">
+                <li th:each="user : ${users}" class="list-group-item">
+                    <span th:text="${user.username}"></span>
+                    <p>Роль: <span th:text="${user.roles}"></span></p>
+                    <form method="post" th:action="@{/owner/deleteUser}" th:if="${user.roles.contains('User')}" style="display:inline;">
+                        <input type="hidden" name="userId" th:value="${user.id}"/>
+                        <button type="submit" class="btn btn-danger btn-sm">Удалить</button>
+                    </form>
+                </li>
+            </ul>
+        </div>
+    </div>
+    <a class="btn btn-secondary" th:href="@{/files}">Назад</a>
+</div>
+<script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"
+        integrity="sha384-DfXdz2htPH0lsSSs5nCTpuj/zy4C+OGpamoFVy38MVBnE+IbbVYUew+OrCXaRkfj"
+        crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.4/dist/umd/popper.min.js"
+        integrity="sha384-SWEk+x0j3E2+9XLq+GNInFLiYETfphCnx2MC6F1fqltU/kKmBfmgB2AtX1HF7JX1"
+        crossorigin="anonymous"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"
+        integrity="sha384-B4gt1jrGC7Jh4AgTPSdUtOBvfO8sh/jFc5tx0Bm8zFZ8nY2t6m2j21gmgJN7Jqnv"
+        crossorigin="anonymous"></script>
+</body>
+</html>

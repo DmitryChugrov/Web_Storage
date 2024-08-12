@@ -2,46 +2,49 @@
 <html xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
-    <title>File Storage</title>
+    <title>Хранилище</title>
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css"
           integrity="sha384-JcKb8q3iqJ61gNV9KGb8thSsNjpSL0n8PARn9HuZOnIxN0hoP+VmmDGMN5t9UJ0Z"
           crossorigin="anonymous">
 </head>
 <body>
 <div class="container mt-5">
-    <h1 class="mb-4">File Storage - <span th:text="${folder}"></span></h1>
+    <h1 class="mb-4">Хранилище - <span th:text="${folder}"></span></h1>
 
-    <!-- Upload File Form -->
     <div class="card mb-4">
         <div class="card-body">
-            <h2 class="card-title">Upload File</h2>
+            <h2 class="card-title">Загрузить файл</h2>
             <form method="post" enctype="multipart/form-data" th:action="@{/files/upload}">
-                <input type="hidden" name="user" th:value="${user}" />
                 <input type="hidden" name="folder" th:value="${folder}" />
                 <div class="form-group">
                     <input type="file" class="form-control" name="file" required/>
                 </div>
-                <button type="submit" class="btn btn-primary">Upload</button>
+                <button type="submit" class="btn btn-primary">Загрузить</button>
             </form>
         </div>
     </div>
 
-    <!-- Files List -->
     <div class="card mb-4" th:if="${files.size() > 0}">
         <div class="card-body">
-            <h2 class="card-title">Files</h2>
+            <h2 class="card-title">Файлы</h2>
             <ul class="list-group">
                 <li th:each="file : ${files}" class="list-group-item">
-                    <a th:href="@{'/files/download/' + ${file.id} + '?user=' + ${user} + '&folder=' + ${folder}}">
-                            <span th:text="${file.fileName}"></span>
+                    <a th:href="@{'/files/download/' + ${file.id} + '?folder=' + ${folder}}">
+                        <span th:text="${file.fileName}"></span>
                     </a>
-                        <p>
-                            <span th:text="'Size: ' + ${file.fileSize} + ' bytes'"></span>
-                        </p>
+                    <p>
+                        <span th:text="'Размер файла: ' + ${file.fileSize} + ' MB'"></span>
+                    </p>
+                    <form method="post" th:action="@{/files/deleteFile}" style="display:inline;">
+                        <input type="hidden" name="fileId" th:value="${file.id}"/>
+                        <input type="hidden" name="folderName" th:value="${folder}"/>
+                        <button type="submit" class="btn btn-danger btn-sm">Удалить</button>
+                    </form>
                 </li>
             </ul>
         </div>
     </div>
+    <a class="btn btn-secondary" th:href="@{/files}">Назад</a>
 </div>
 
 <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"

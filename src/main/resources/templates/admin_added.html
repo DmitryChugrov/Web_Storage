@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Администратор создан</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+</head>
+<body>
+<div class="container mt-5">
+    <h1 class="mb-4">Администратор создан</h1>
+    <div class="alert alert-success">
+        <p>Имя администратора: <strong th:text="${username}"></strong></p>
+        <p>Пароль администратора: <strong th:text="${password}"></strong></p>
+    </div>
+    <a href="/owner/addAdmin" class="btn btn-primary">Создать еще одного администратора</a>
+    <div>
+        <a class="btn btn-secondary" th:href="@{/files}">Назад</a>
+    </div>
+</div>
+</body>
+</html>

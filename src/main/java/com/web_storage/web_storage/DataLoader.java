@@ -6,6 +6,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;
 
+import java.util.Collections;
+
 @Component
 public class DataLoader implements CommandLineRunner {
 
@@ -17,6 +19,7 @@ public class DataLoader implements CommandLineRunner {
         UserEntity adminUser = new UserEntity();
 //        adminUser.setUsername("admin");
 //        adminUser.setPassword("1111");
+//        adminUser.setRoles("ROLE_OWNER");
 //        userService.saveUser(adminUser);
     }
 }

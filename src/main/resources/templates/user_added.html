@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Пользователь создан</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+</head>
+<body>
+<div class="container mt-5">
+    <h1 class="mb-4">Пользователь создан</h1>
+    <div class="alert alert-success">
+        <p>Имя пользователя: <strong th:text="${username}"></strong></p>
+        <p>Пароль пользователя: <strong th:text="${password}"></strong></p>
+    </div>
+    <a href="/admin/addUser" class="btn btn-primary">Добавить еще одного пользователя</a>
+    <div>
+        <a class="btn btn-secondary" th:href="@{/files}">Назад</a>
+    </div>
+</div>
+</body>
+</html>

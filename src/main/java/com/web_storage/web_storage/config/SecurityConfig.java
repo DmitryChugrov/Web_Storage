@@ -26,20 +26,20 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-                .authorizeRequests(authorizeRequests ->
-                        authorizeRequests
-                                .anyRequest().authenticated()
+                .authorizeHttpRequests(auth -> auth
+                        .requestMatchers("/admin/**").hasRole("ADMIN")
+                        .requestMatchers("/owner/**").hasRole("OWNER")
+                        .requestMatchers("/user/**").hasRole("USER")
+                        .anyRequest().authenticated()
                 )
-                .formLogin(formLogin ->
-                        formLogin
-                                .loginPage("/login")
-                                .successHandler(new CustomAuthenticationSuccessHandler())  // Используем кастомный хендлер
-                                .failureUrl("/login?error=true")
-                                .permitAll()
+                .formLogin(form -> form
+                        .loginPage("/login")
+                        .successHandler(new CustomAuthenticationSuccessHandler())
+                        .failureUrl("/login?error=true")
+                        .permitAll()
                 )
-                .logout(logout ->
-                        logout
-                                .permitAll()
+                .logout(logout -> logout
+                        .permitAll()
                 );
 
         return http.build();

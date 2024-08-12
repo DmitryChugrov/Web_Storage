@@ -8,5 +8,8 @@ import java.util.List;
 public interface FileRepository extends JpaRepository<FileEntity, Long> {
     List<FileEntity> findByUser(String user);
     List<FileEntity> findByUserAndPathFolder(String user, String pathFolder);
+    List<FileEntity> findByPathFolder(String pathFolder);
+    void deleteByUserAndPathFolder(String user, String pathFolder);
+
 
 }

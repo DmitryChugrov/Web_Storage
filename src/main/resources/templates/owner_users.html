@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Все пользователи</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+</head>
+<body>
+<div class="container mt-5">
+    <h1 class="mb-4">Все пользователи</h1>
+    <div class="card mb-4" th:if="${users.size() > 0}">
+        <div class="card-body">
+            <h2 class="card-title">Список пользователей</h2>
+            <ul class="list-group">
+                <li th:each="user : ${users}" class="list-group-item">
+                    <span th:text="${user.username}"></span>
+                    <p>Роль: <span th:text="${user.roles}"></span></p>
+                    <form method="post" th:action="@{/owner/deleteUser}" style="display:inline;">
+                        <input type="hidden" name="userId" th:value="${user.id}"/>
+                        <button type="submit" class="btn btn-danger btn-sm">Удалить</button>
+                    </form>
+                </li>
+            </ul>
+        </div>
+    </div>
+    <a class="btn btn-secondary" th:href="@{/files}">Назад</a>
+</div>
+</body>
+</html>
