@@ -1,26 +1,18 @@
 package com.web_storage.web_storage.model;
+import org.springframework.data.annotation.Id;
+import org.springframework.data.redis.core.RedisHash;
 
-import jakarta.persistence.*;
-
+import java.io.Serializable;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 
-@Entity
-@Table(name = "user_entity")
+@RedisHash("UserEntity")
 public class UserEntity {
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-
-    @Column(name = "username", nullable = false, unique = true)
     private String username;
-
-    @Column(name = "password", nullable = false)
     private String password;
-
-    @ElementCollection(fetch = FetchType.EAGER)
-    @Column(name = "role")
     private Set<String> roles = new HashSet<>();
 
     public UserEntity() {
@@ -31,6 +23,7 @@ public class UserEntity {
         this.password = password;
         this.roles = roles;
     }
+
     public Long getId() {
         return id;
     }
@@ -59,7 +52,7 @@ public class UserEntity {
         return roles;
     }
 
-    public void setRoles(String roles) {
-        this.roles = Collections.singleton(roles);
+    public void setRoles(Set<String> roles) {
+        this.roles = roles;
     }
 }

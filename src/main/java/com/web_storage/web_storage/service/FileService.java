@@ -1,49 +1,49 @@
 package com.web_storage.web_storage.service;
 
 import com.web_storage.web_storage.model.FileEntity;
-import com.web_storage.web_storage.repository.FileRepository;
-import jakarta.persistence.NoResultException;
+import jakarta.annotation.PostConstruct;
+import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
-import jakarta.persistence.EntityManager;
-import jakarta.persistence.PersistenceContext;
-import jakarta.persistence.Query;
 import java.io.IOException;
-import java.nio.file.*;
-import java.nio.file.attribute.BasicFileAttributes;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
+
 @Service
 public class FileService {
 
-    @PersistenceContext
-    private EntityManager entityManager;
-
-    @Autowired
-    private FileRepository fileRepository;
-
     private final Path rootLocation = Paths.get("uploads");
 
-    @Transactional
-    public void createFolder(String user, String folderName) {
-        String tableName = sanitizeTableName(folderName);
-        Query query = entityManager.createNativeQuery("CREATE TABLE IF NOT EXISTS " + tableName + " (" +
-                "id BIGINT AUTO_INCREMENT PRIMARY KEY, " +
-                "file_name VARCHAR(255), " +
-                "file_path VARCHAR(255), " +
-                "file_type VARCHAR(50), " +
-                "file_size DOUBLE) ENGINE=InnoDB");
-        query.executeUpdate();
+    @Autowired
+    private RedisTemplate<String, Object> redisTemplate;
 
-        FileEntity fileEntity = new FileEntity(user, folderName);
-        fileRepository.save(fileEntity);
+    private static final String FILE_ID_COUNTER_KEY = "file:id:counter";
+
+    @PostConstruct
+    public void initializeCounter() {
+        if (redisTemplate.opsForValue().get(FILE_ID_COUNTER_KEY) == null) {
+            redisTemplate.opsForValue().set(FILE_ID_COUNTER_KEY, 0);
+        }
+    }
+
+    private Long generateFileId() {
+        return redisTemplate.opsForValue().increment(FILE_ID_COUNTER_KEY);
+    }
+
+    public void createFolder(String user, String folderName) {
+        redisTemplate.opsForSet().add("folders:" + user, folderName);
 
         try {
             Path folderPath = rootLocation.resolve(Paths.get(folderName)).normalize().toAbsolutePath();
@@ -55,10 +55,10 @@ public class FileService {
         }
     }
 
-    @Transactional
+
     public void saveFile(String user, MultipartFile file, String folder) throws IOException {
-        String pathFolder = folder;
-        Path folderPath = rootLocation.resolve(Paths.get(pathFolder)).normalize().toAbsolutePath();
+        String key = "folder:" + user + ":" + folder;
+        Path folderPath = rootLocation.resolve(Paths.get(folder)).normalize().toAbsolutePath();
 
         if (!Files.exists(folderPath)) {
             Files.createDirectories(folderPath);
@@ -69,61 +69,188 @@ public class FileService {
             throw new RuntimeException("Cannot store file outside current directory");
         }
 
-        Files.copy(file.getInputStream(), destinationFile, StandardCopyOption.REPLACE_EXISTING);
+        Files.copy(file.getInputStream(), destinationFile);
 
-        double fileSizeInMB = file.getSize() / (1024.0 * 1024.0);
+        FileEntity fileEntity = new FileEntity();
+        fileEntity.setId(generateFileId());
+        fileEntity.setUser(user);
+        fileEntity.setPathFolder(folder);
+        fileEntity.setFileName(file.getOriginalFilename());
+        fileEntity.setFilePath(destinationFile.toString());
+        fileEntity.setFileType(file.getContentType());
+        fileEntity.setFileSize(file.getSize() / (1024 * 1024));
 
-        String tableName = sanitizeTableName(pathFolder);
-        String sql = "INSERT INTO " + tableName + " (file_name, file_path, file_type, file_size) VALUES (?, ?, ?, ?)";
-        Query query = entityManager.createNativeQuery(sql);
-        query.setParameter(1, file.getOriginalFilename());
-        query.setParameter(2, destinationFile.toString());
-        query.setParameter(3, file.getContentType());
-        query.setParameter(4, fileSizeInMB);
-        query.executeUpdate();
+        redisTemplate.opsForSet().add(key, fileEntity);
     }
 
     public List<String> getFoldersByUser(String user) {
-        List<FileEntity> fileEntities = fileRepository.findByUser(user);
-        return fileEntities.stream()
-                .map(FileEntity::getPathFolder)
-                .collect(Collectors.toList());
+        Set<Object> folders = redisTemplate.opsForSet().members("folders:" + user);
+        return folders.stream().map(Object::toString).collect(Collectors.toList());
     }
 
     public List<FileEntity> getFilesByUserAndFolder(String user, String folder) {
-        String tableName = sanitizeTableName(folder);
-        String sql = "SELECT id, file_name AS fileName, file_path AS filePath, file_type AS fileType, file_size AS fileSize FROM " + tableName;
-        List<Object[]> results = entityManager.createNativeQuery(sql).getResultList();
-        return results.stream().map(result -> {
-            FileEntity fileEntity = new FileEntity();
-            fileEntity.setId(((Number) result[0]).longValue());
-            fileEntity.setUser(user);
-            fileEntity.setPathFolder(folder);
-            fileEntity.setFileName((String) result[1]);
-            fileEntity.setFilePath((String) result[2]);
-            fileEntity.setFileType((String) result[3]);
-            fileEntity.setFileSize(((Number) result[4]).longValue());
-            return fileEntity;
-        }).collect(Collectors.toList());
+        String key = "folder:" + user + ":" + folder;
+        Set<Object> files = redisTemplate.opsForSet().members(key);
+        return files.stream().map(file -> (FileEntity) file).collect(Collectors.toList());
     }
+
 
     public Path getFilePath(Long fileId, String user, String folder) {
-        String tableName = sanitizeTableName(folder);
-        String sql = "SELECT file_path FROM " + tableName + " WHERE id = ?";
-        return Paths.get((String) entityManager.createNativeQuery(sql).setParameter(1, fileId).getSingleResult());
+        String key = "folder:" + user + ":" + folder;
+        Set<Object> files = redisTemplate.opsForSet().members(key);
+
+        for (Object fileObj : files) {
+            FileEntity fileEntity = (FileEntity) fileObj;
+            if (fileEntity.getId().equals(fileId)) {
+                return Paths.get(fileEntity.getFilePath());
+            }
+        }
+
+        throw new RuntimeException("File not found or access denied.");
     }
 
-    private String sanitizeTableName(String tableName) {
-        return tableName.replaceAll("[^a-zA-Z0-9_]", "");
+    public void deleteFolder(String user, String folderName) {
+        String key = "folder:" + user + ":" + folderName;
+
+        Set<Object> files = redisTemplate.opsForSet().members(key);
+        if (files != null) {
+            for (Object file : files) {
+                if (file instanceof FileEntity) {
+                    Path path = Paths.get(((FileEntity) file).getFilePath());
+                    try {
+                        Files.deleteIfExists(path);
+                    } catch (IOException e) {
+                        throw new RuntimeException("Could not delete file: " + path, e);
+                    }
+                }
+            }
+        }
+
+        redisTemplate.delete(key);
+        redisTemplate.opsForSet().remove("folders:" + user, folderName);
+
+        Path folderPath = rootLocation.resolve(Paths.get(folderName)).normalize().toAbsolutePath();
+        try {
+            if (Files.exists(folderPath)) {
+                Files.walk(folderPath)
+                        .sorted((p1, p2) -> p2.compareTo(p1))
+                        .map(Path::toFile)
+                        .forEach(java.io.File::delete);
+            }
+        } catch (IOException e) {
+            throw new RuntimeException("Could not delete folder on disk", e);
+        }
     }
+
+    public void deleteFile(Long fileId, String folderName) {
+        String key = "folder:" + getCurrentUsername() + ":" + folderName; // Убедитесь, что ключ включает имя пользователя
+        Set<Object> files = redisTemplate.opsForSet().members(key);
+
+        if (files == null || files.isEmpty()) {
+            throw new RuntimeException("No files found in folder.");
+        }
+
+        FileEntity fileEntityToDelete = null;
+
+        for (Object fileObj : files) {
+            if (fileObj instanceof FileEntity) {
+                FileEntity fileEntity = (FileEntity) fileObj;
+                if (fileEntity.getId().equals(fileId)) {
+                    fileEntityToDelete = fileEntity;
+                    break;
+                }
+            }
+        }
+
+        if (fileEntityToDelete == null) {
+            throw new RuntimeException("File with ID " + fileId + " not found.");
+        }
+
+        Path filePath = Paths.get(fileEntityToDelete.getFilePath());
+        try {
+            if (Files.exists(filePath)) {
+                Files.delete(filePath);
+                System.out.println("File deleted from disk: " + filePath);
+            } else {
+                System.out.println("File does not exist on disk: " + filePath);
+            }
+            redisTemplate.opsForSet().remove(key, fileEntityToDelete);
+            System.out.println("File removed from Redis: " + fileEntityToDelete);
+
+        } catch (IOException e) {
+            throw new RuntimeException("Could not delete file from disk", e);
+        } catch (Exception e) {
+            throw new RuntimeException("Could not delete file from Redis", e);
+        }
+    }
+
+    private boolean hasAnyRole(Set<String> roles) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication != null && authentication.getPrincipal() instanceof UserDetails) {
+            UserDetails userDetails = (UserDetails) authentication.getPrincipal();
+            Set<String> userRoles = userDetails.getAuthorities().stream()
+                    .map(authority -> authority.getAuthority())
+                    .collect(Collectors.toSet());
+            return !Collections.disjoint(userRoles, roles);
+        }
+        return false;
+    }
+
+    public boolean isOwner() {
+        return hasAnyRole(Set.of("ROLE_OWNER"));
+    }
+
+    public boolean isAdmin() {
+        return hasAnyRole(Set.of("ROLE_ADMIN"));
+    }
+
+    @Transactional
+    public void deleteFolderForOwner(String user, String folderName) {
+        if (!isOwner()) {
+            throw new SecurityException("You do not have permission to delete this folder.");
+        }
+        deleteFolder(user, folderName);
+    }
+
+    @Transactional
+    public void deleteFileForAdminOrOwner(Long fileId, String folderName) {
+        if (!isOwner() && !isAdmin()) {
+            throw new SecurityException("You do not have permission to delete this file.");
+        }
+        deleteFile(fileId, folderName);
+    }
+
+    private String getCurrentUsername() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        return authentication.getName();
+    }
+
     public List<FolderInfo> getAllFoldersWithOwners() {
-        List<FileEntity> allFiles = fileRepository.findAll();
-        return allFiles.stream()
-                .collect(Collectors.groupingBy(FileEntity::getPathFolder))
-                .entrySet().stream()
-                .map(entry -> new FolderInfo(entry.getKey(), entry.getValue().get(0).getUser()))
-                .collect(Collectors.toList());
+        Set<String> folderKeys = redisTemplate.keys("folders:*");
+
+        List<FolderInfo> folderInfos = new ArrayList<>();
+
+        if (folderKeys != null) {
+            for (String folderKey : folderKeys) {
+                String user = folderKey.split(":")[1];
+                Set<Object> folderNames = redisTemplate.opsForSet().members(folderKey);
+
+                if (folderNames != null) {
+                    for (Object folderNameObj : folderNames) {
+                        String folderName = folderNameObj.toString();
+                        String fileKey = "folder:" + user + ":" + folderName;
+                        Set<Object> files = redisTemplate.opsForSet().members(fileKey);
+
+                        // Добавляем информацию о папке, даже если файлов нет
+                        folderInfos.add(new FolderInfo(folderName, user));
+                    }
+                }
+            }
+        }
+
+        return folderInfos;
     }
+
 
     public static class FolderInfo {
         private String folderName;
@@ -142,104 +269,4 @@ public class FileService {
             return owner;
         }
     }
-
-    public List<FileEntity> getFilesByFolder(String folder) {
-        return fileRepository.findByPathFolder(folder);
-    }
-
-    @Transactional
-    public void deleteFolder(String user, String folderName) {
-        fileRepository.deleteByUserAndPathFolder(user, folderName);
-        String tableName = sanitizeTableName(folderName);
-        Query query = entityManager.createNativeQuery("DROP TABLE IF EXISTS " + tableName);
-        query.executeUpdate();
-        Path folderPath = rootLocation.resolve(Paths.get(folderName)).normalize().toAbsolutePath();
-        try {
-            if (Files.exists(folderPath)) {
-                Files.walkFileTree(folderPath, new FileVisitor<Path>() {
-                    @Override
-                    public FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs) throws IOException {
-                        return FileVisitResult.CONTINUE;
-                    }
-
-                    @Override
-                    public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
-                        Files.delete(file);
-                        return FileVisitResult.CONTINUE;
-                    }
-
-                    @Override
-                    public FileVisitResult visitFileFailed(Path file, IOException exc) throws IOException {
-                        return FileVisitResult.CONTINUE;
-                    }
-
-                    @Override
-                    public FileVisitResult postVisitDirectory(Path dir, IOException exc) throws IOException {
-                        Files.delete(dir);
-                        return FileVisitResult.CONTINUE;
-                    }
-                });
-            }
-        } catch (IOException e) {
-            throw new RuntimeException("Could not delete folder on disk", e);
-        }
-    }
-    @Transactional
-    public void deleteFile(Long fileId, String folderName) {
-        String tableName = sanitizeTableName(folderName);
-
-        String sqlGetFilePath = "SELECT file_path FROM " + tableName + " WHERE id = ?";
-        String filePath;
-        try {
-            filePath = (String) entityManager.createNativeQuery(sqlGetFilePath)
-                    .setParameter(1, fileId)
-                    .getSingleResult();
-        } catch (NoResultException e) {
-            throw new RuntimeException("File not found for ID: " + fileId, e);
-        }
-
-        Path file = Paths.get(filePath);
-        try {
-            Files.deleteIfExists(file);
-        } catch (IOException e) {
-            throw new RuntimeException("Could not delete file on disk", e);
-        }
-
-        String sqlDeleteFile = "DELETE FROM " + tableName + " WHERE id = ?";
-        Query queryDeleteFile = entityManager.createNativeQuery(sqlDeleteFile);
-        queryDeleteFile.setParameter(1, fileId);
-        queryDeleteFile.executeUpdate();
-    }
-
-    private boolean hasAnyRole(Set<String> roles) {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        if (authentication != null && authentication.getPrincipal() instanceof UserDetails) {
-            UserDetails userDetails = (UserDetails) authentication.getPrincipal();
-            return userDetails.getAuthorities().stream()
-                    .anyMatch(grantedAuthority -> roles.contains(grantedAuthority.getAuthority()));
-        }
-        return false;
-    }
-
-    public boolean isOwner() {
-        return hasAnyRole(Set.of("ROLE_OWNER"));
-    }
-
-    public boolean isAdmin() {
-        return hasAnyRole(Set.of("ROLE_ADMIN"));
-    }
-
-    @Transactional
-    public void deleteFolderForOwner(String user,String folderName) {
-        deleteFolder(user, folderName);
-    }
-
-    @Transactional
-    public void deleteFileForAdminOrOwner(Long fileId, String folderName) {
-        if (!isOwner() && !isAdmin()) {
-            throw new SecurityException("You do not have permission to delete this file.");
-        }
-        deleteFile(fileId, folderName);
-    }
-
 }

@@ -49,12 +49,16 @@ public class FileController {
 
     private String listFiles(Model model, String user, String folder) {
         List<FileEntity> files = fileService.getFilesByUserAndFolder(user, folder);
+
+        if (files.isEmpty()) {
+            model.addAttribute("message", "Папка пуста");
+        }
+
         model.addAttribute("files", files);
         model.addAttribute("user", user);
         model.addAttribute("folder", folder);
         return "file_list";
     }
-
     @PostMapping("/upload")
     public String uploadFile(@RequestParam("file") MultipartFile file, @RequestParam("folder") String folder, Model model) {
         String user = getCurrentUsername();

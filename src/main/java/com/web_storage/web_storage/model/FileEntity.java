@@ -1,28 +1,14 @@
 package com.web_storage.web_storage.model;
-import jakarta.persistence.*;
+import java.io.Serializable;
 
-@Entity
-@Table(name = "file_entity")
-public class FileEntity {
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+public class FileEntity implements Serializable {
+
     private Long id;
-
-    @Column(name = "user_name", nullable = false)
     private String user;
-
-    @Column(name = "path_folder")
     private String pathFolder;
-    @Transient
     private String fileName;
-
-    @Transient
     private String filePath;
-
-    @Transient
     private String fileType;
-
-    @Transient
     private Long fileSize;
 
     public FileEntity() {
@@ -33,7 +19,6 @@ public class FileEntity {
         this.pathFolder = pathFolder;
     }
 
-    // Getters and setters
     public Long getId() {
         return id;
     }
@@ -57,6 +42,7 @@ public class FileEntity {
     public void setPathFolder(String pathFolder) {
         this.pathFolder = pathFolder;
     }
+
     public String getFileName() {
         return fileName;
     }

@@ -19,7 +19,7 @@ public class DataLoader implements CommandLineRunner {
         UserEntity adminUser = new UserEntity();
 //        adminUser.setUsername("admin");
 //        adminUser.setPassword("1111");
-//        adminUser.setRoles("ROLE_OWNER");
+//        adminUser.setRoles(Collections.singleton("ROLE_OWNER"));
 //        userService.saveUser(adminUser);
     }
 }
