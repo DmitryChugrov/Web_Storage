@@ -5,6 +5,7 @@ public class FileEntity implements Serializable {
 
     private Long id;
     private String user;
+    private int accessLevel;
     private String pathFolder;
     private String fileName;
     private String filePath;
@@ -73,5 +74,13 @@ public class FileEntity implements Serializable {
 
     public void setFileSize(Long fileSize) {
         this.fileSize = fileSize;
+    }
+
+    public int getAccessLevel() {
+        return accessLevel;
+    }
+
+    public void setAccessLevel(int accessLevel) {
+        this.accessLevel = accessLevel;
     }
 }

@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Удаление запрещено</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+</head>
+<body>
+<div class="container mt-5">
+    <h1 class="mb-4 text-danger">Удаление файла запрещено</h1>
+    <p>У вас недостаточно прав для удаления файлов в этой папке.</p>
+    <a class="btn btn-secondary" th:href="@{/files}">Назад</a>
+</div>
+</body>
+</html>

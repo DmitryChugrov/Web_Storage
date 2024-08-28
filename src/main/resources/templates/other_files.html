@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Файлы в папке</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+</head>
+<body>
+<div class="container mt-5">
+    <h1 class="mb-4">Файлы в папке: <span th:text="${folder}"></span></h1>
+
+    <div th:if="${canUpload}">
+        <div class="card mb-4">
+            <div class="card-body">
+                <h2 class="card-title">Загрузить файл</h2>
+                <form th:action="@{/files/upload}" method="post" enctype="multipart/form-data">
+                    <input type="hidden" name="folder" th:value="${folder}" />
+                    <input type="hidden" name="owner" th:value="${user}" />
+                    <div class="form-group">
+                        <label for="file">Выберите файл</label>
+                        <input type="file" id="file" name="file" class="form-control" required />
+                    </div>
+                    <button type="submit" class="btn btn-primary">Загрузить</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div th:if="${files.size() > 0}">
+        <div class="card mb-4">
+            <div class="card-body">
+                <h2 class="card-title">Список файлов</h2>
+                <ul class="list-group">
+                    <li th:each="file : ${files}" class="list-group-item">
+                        <a th:href="@{'/files/download/' + ${file.id} + '?owner=' + ${file.user} + '&folder=' + ${folder}}">
+                            <span th:text="${file.fileName}"></span>
+                        </a>
+                        <p>
+                            <span>Размер: </span>
+                            <span th:text="${file.fileSize} + ' MB'"></span>
+                        </p>
+                        <p>
+                            <span>Уровень доступа: </span>
+                            <span th:text="${file.accessLevel}"></span>
+                        </p>
+                        <p>
+                            <span>Создатель: </span>
+                            <span th:text="${file.user}"></span>
+                        </p>
+
+                        <form th:if="${userAccessLevel == folderAccessLevel}" th:action="@{/files/folders/deleteFile}" method="post" style="display:inline;">
+                            <input type="hidden" name="fileId" th:value="${file.id}" />
+                            <input type="hidden" name="folder" th:value="${folder}" />
+                            <input type="hidden" name="owner" th:value="${user}" />
+                            <button type="submit" class="btn btn-danger btn-sm">Удалить</button>
+                        </form>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <a class="btn btn-secondary" th:href="@{/files}">Назад</a>
+</div>
+</body>
+</html>

@@ -16,6 +16,7 @@
             <h2 class="card-title">Загрузить файл</h2>
             <form method="post" enctype="multipart/form-data" th:action="@{/files/upload}">
                 <input type="hidden" name="folder" th:value="${folder}" />
+                <input type="hidden" name="owner" th:value="${user}" />
                 <div class="form-group">
                     <input type="file" class="form-control" name="file" required/>
                 </div>
@@ -29,11 +30,17 @@
             <h2 class="card-title">Файлы</h2>
             <ul class="list-group" th:if="${files.size() > 0}">
                 <li th:each="file : ${files}" class="list-group-item">
-                    <a th:href="@{'/files/download/' + ${file.id} + '?folder=' + ${folder}}">
+                    <a th:href="@{'/files/download/' + ${file.id} + '?owner=' + ${file.user} + '&folder=' + ${folder}}">
                         <span th:text="${file.fileName}"></span>
                     </a>
                     <p>
                         <span th:text="'Размер файла: ' + ${file.fileSize} + ' MB'"></span>
+                    </p>
+                    <p>
+                        <span th:text="'Уровень доступа файла: ' + ${file.accessLevel}"></span>
+                    </p>
+                    <p>
+                        <span th:text="'Создатель: ' + ${file.user}"></span>
                     </p>
                     <form method="post" th:action="@{/files/deleteFile}" style="display:inline;">
                         <input type="hidden" name="fileId" th:value="${file.id}"/>

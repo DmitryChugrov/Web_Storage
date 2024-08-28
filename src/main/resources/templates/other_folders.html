@@ -13,15 +13,16 @@
             <h2 class="card-title">Список папок</h2>
             <ul class="list-group">
                 <li th:each="folderInfo : ${folders}" class="list-group-item">
-                    <a th:href="@{'/owner/folders/'  + ${folderInfo.owner} + '/' + ${folderInfo.folderName}}">
+                    <a th:href="@{'/files/folders/' + ${folderInfo.owner} + '/' + ${folderInfo.folderName}}">
                         <span th:text="${folderInfo.folderName}"></span>
                     </a>
                     <p>Создатель: <span th:text="${folderInfo.owner}"></span></p>
                     <p>Уровень доступа: <span th:text="${folderInfo.accessLevelString}"></span></p>
-                    <form method="post" th:action="@{/owner/deleteFolder}" style="display:inline;">
-                        <input type="hidden" name="folderOwner" th:value="${folderInfo.owner}"/>
-                        <input type="hidden" name="folderName" th:value="${folderInfo.folderName}"/>
-                        <button type="submit" class="btn btn-danger btn-sm">Удалить папку</button>
+                    <form th:if="${userAccessLevel == folderInfo.accessLevel}"
+                          th:action="@{/files/folders/deleteOtherFolder}" method="post" style="display:inline;">
+                        <input type="hidden" name="folderOwner" th:value="${folderInfo.owner}" />
+                        <input type="hidden" name="folderName" th:value="${folderInfo.folderName}" />
+                        <button type="submit" class="btn btn-danger btn-sm">Удалить</button>
                     </form>
                 </li>
             </ul>

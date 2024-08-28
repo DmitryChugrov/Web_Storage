@@ -20,6 +20,7 @@ public class DataLoader implements CommandLineRunner {
 //        adminUser.setUsername("admin");
 //        adminUser.setPassword("1111");
 //        adminUser.setRoles(Collections.singleton("ROLE_OWNER"));
+//        adminUser.setAccessLevel(3);
 //        userService.saveUser(adminUser);
     }
 }

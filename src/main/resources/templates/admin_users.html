@@ -15,7 +15,8 @@
                 <li th:each="user : ${users}" class="list-group-item">
                     <span th:text="${user.username}"></span>
                     <p>Роль: <span th:text="${user.roles}"></span></p>
-                    <form method="post" th:action="@{/owner/deleteUser}" th:if="${user.roles.contains('User')}" style="display:inline;">
+                    <p>Уровень доступа: <span th:text="${user.accessLevel}"></span></p>
+                    <form method="post" th:action="@{/admin/deleteUser}" th:if="${user.roles.contains('User')}" style="display:inline;">
                         <input type="hidden" name="userId" th:value="${user.id}"/>
                         <button type="submit" class="btn btn-danger btn-sm">Удалить</button>
                     </form>

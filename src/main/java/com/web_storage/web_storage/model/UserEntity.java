@@ -1,4 +1,5 @@
 package com.web_storage.web_storage.model;
+import com.web_storage.web_storage.service.FileService;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.redis.core.RedisHash;
 
@@ -13,6 +14,7 @@ public class UserEntity {
     private Long id;
     private String username;
     private String password;
+    private int accessLevel;
     private Set<String> roles = new HashSet<>();
 
     public UserEntity() {
@@ -55,4 +57,15 @@ public class UserEntity {
     public void setRoles(Set<String> roles) {
         this.roles = roles;
     }
+
+    public int getAccessLevel() {
+        return accessLevel;
+    }
+
+    public void setAccessLevel(int accessLevel) {
+        this.accessLevel = accessLevel;
+    }
+//    public String getAccessLevelString() {
+//        return FileService.getAccessLevelString(accessLevel);
+//    }
 }

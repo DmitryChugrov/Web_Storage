@@ -1,6 +1,8 @@
 package com.web_storage.web_storage.service;
 
 import com.web_storage.web_storage.model.FileEntity;
+import com.web_storage.web_storage.model.FolderEntity;
+import com.web_storage.web_storage.model.UserEntity;
 import jakarta.annotation.PostConstruct;
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -28,38 +30,59 @@ public class FileService {
 
     @Autowired
     private RedisTemplate<String, Object> redisTemplate;
+    @Autowired
+    private UserService userService;
 
     private static final String FILE_ID_COUNTER_KEY = "file:id:counter";
+    private static final String FOLDER_ID_COUNTER_KEY = "folder:id:counter";
 
     @PostConstruct
-    public void initializeCounter() {
+    public void initializeFileCounter() {
         if (redisTemplate.opsForValue().get(FILE_ID_COUNTER_KEY) == null) {
             redisTemplate.opsForValue().set(FILE_ID_COUNTER_KEY, 0);
+        }
+    }
+    @PostConstruct
+    public void initializeFolderCounter() {
+        if (redisTemplate.opsForValue().get(FOLDER_ID_COUNTER_KEY) == null) {
+            redisTemplate.opsForValue().set(FOLDER_ID_COUNTER_KEY, 0);
         }
     }
 
     private Long generateFileId() {
         return redisTemplate.opsForValue().increment(FILE_ID_COUNTER_KEY);
     }
-
-    public void createFolder(String user, String folderName) {
-        redisTemplate.opsForSet().add("folders:" + user, folderName);
-
-        try {
-            Path folderPath = rootLocation.resolve(Paths.get(folderName)).normalize().toAbsolutePath();
-            if (!Files.exists(folderPath)) {
-                Files.createDirectories(folderPath);
-            }
-        } catch (IOException e) {
-            throw new RuntimeException("Could not create folder on disk", e);
-        }
+    private Long generateFolderId() {
+        return redisTemplate.opsForValue().increment(FOLDER_ID_COUNTER_KEY);
     }
 
 
-    public void saveFile(String user, MultipartFile file, String folder) throws IOException {
-        String key = "folder:" + user + ":" + folder;
-        Path folderPath = rootLocation.resolve(Paths.get(folder)).normalize().toAbsolutePath();
+    public void createFolder(String user, String folderName) {
+        UserEntity currentUser = userService.findByUsername(user);
+        String folderPath = rootLocation.resolve(Paths.get(folderName)).normalize().toAbsolutePath().toString();
+        FolderEntity folderEntity = new FolderEntity();
+        folderEntity.setId(generateFolderId());
+        folderEntity.setUser(user);
+        folderEntity.setFolderName(folderName);
+        folderEntity.setFolderPath(folderPath);
+        folderEntity.setAccessLevel(currentUser.getAccessLevel());
 
+        String key = "folders:" + user;
+        redisTemplate.opsForSet().add(key, folderName);
+
+        String folderInfoKey = "folder:" + user + ":" + folderName + ":info";
+        redisTemplate.opsForValue().set(folderInfoKey, folderEntity);
+    }
+
+    public void saveFile(String folderOwner, MultipartFile file, String folder) throws IOException {
+        UserEntity currentUser = userService.findByUsername(folderOwner);
+
+        FolderEntity folderEntity = getFolderEntity(folderOwner, folder);
+        if (folderEntity == null) {
+            throw new RuntimeException("Folder not found for user: " + folderOwner + ", folder: " + folder);
+        }
+
+        Path folderPath = Paths.get(folderEntity.getFolderPath()).normalize().toAbsolutePath();
         if (!Files.exists(folderPath)) {
             Files.createDirectories(folderPath);
         }
@@ -73,14 +96,29 @@ public class FileService {
 
         FileEntity fileEntity = new FileEntity();
         fileEntity.setId(generateFileId());
-        fileEntity.setUser(user);
+        fileEntity.setUser(getCurrentUsername());
         fileEntity.setPathFolder(folder);
         fileEntity.setFileName(file.getOriginalFilename());
         fileEntity.setFilePath(destinationFile.toString());
         fileEntity.setFileType(file.getContentType());
         fileEntity.setFileSize(file.getSize() / (1024 * 1024));
+        fileEntity.setAccessLevel(folderEntity.getAccessLevel());
 
-        redisTemplate.opsForSet().add(key, fileEntity);
+        String fileKey = "folder:" + folderOwner + ":" + folder;
+        redisTemplate.opsForSet().add(fileKey, fileEntity);
+    }
+
+
+    public FolderEntity getFolderEntity(String user, String folderName) {
+        String folderEntityKey = "folder:" + user + ":" + folderName + ":info";
+        FolderEntity folderEntity = (FolderEntity) redisTemplate.opsForValue().get(folderEntityKey);
+
+        if (folderEntity == null) {
+            System.out.println("Folder " + folderName + " not found for user: " + user);
+            return null;
+        }
+
+        return folderEntity;
     }
 
     public List<String> getFoldersByUser(String user) {
@@ -89,19 +127,40 @@ public class FileService {
     }
 
     public List<FileEntity> getFilesByUserAndFolder(String user, String folder) {
-        String key = "folder:" + user + ":" + folder;
-        Set<Object> files = redisTemplate.opsForSet().members(key);
-        return files.stream().map(file -> (FileEntity) file).collect(Collectors.toList());
+        String folderKey = "folder:" + user + ":" + folder;
+
+        Set<Object> files = redisTemplate.opsForSet().members(folderKey);
+
+        if (files == null || files.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        return files.stream()
+                .filter(file -> file instanceof FileEntity)
+                .map(file -> (FileEntity) file)
+                .collect(Collectors.toList());
     }
-
-
-    public Path getFilePath(Long fileId, String user, String folder) {
-        String key = "folder:" + user + ":" + folder;
+    public Path getFilePath(Long fileId, String owner, String folder) {
+        UserEntity currentUser = userService.findByUsername(getCurrentUsername());
+        System.out.println(currentUser.toString());
+        String key = "folder:" + owner + ":" + folder;
         Set<Object> files = redisTemplate.opsForSet().members(key);
+
+        if (files == null || files.isEmpty()) {
+            throw new RuntimeException("No files found in the specified folder or folder doesn't exist.");
+        }
 
         for (Object fileObj : files) {
+            if (!(fileObj instanceof FileEntity)) {
+                throw new RuntimeException("Invalid object type found in Redis. Expected FileEntity.");
+            }
+
             FileEntity fileEntity = (FileEntity) fileObj;
             if (fileEntity.getId().equals(fileId)) {
+                if (fileEntity.getAccessLevel() > currentUser.getAccessLevel()) {
+
+                    throw new SecurityException("Недостаточно прав для доступа к этому файлу");
+                }
                 return Paths.get(fileEntity.getFilePath());
             }
         }
@@ -109,16 +168,22 @@ public class FileService {
         throw new RuntimeException("File not found or access denied.");
     }
 
-    public void deleteFolder(String user, String folderName) {
-        String key = "folder:" + user + ":" + folderName;
 
-        Set<Object> files = redisTemplate.opsForSet().members(key);
+    public void deleteFolder(String user, String folderName) {
+        String folderKey = "folder:" + user + ":" + folderName;
+        String folderInfoKey = folderKey + ":info";
+
+        Set<Object> files = redisTemplate.opsForSet().members(folderKey);
         if (files != null) {
             for (Object file : files) {
                 if (file instanceof FileEntity) {
-                    Path path = Paths.get(((FileEntity) file).getFilePath());
+                    FileEntity fileEntity = (FileEntity) file;
+                    Path path = Paths.get(fileEntity.getFilePath());
+
                     try {
                         Files.deleteIfExists(path);
+
+                        redisTemplate.opsForSet().remove(folderKey, fileEntity);
                     } catch (IOException e) {
                         throw new RuntimeException("Could not delete file: " + path, e);
                     }
@@ -126,8 +191,10 @@ public class FileService {
             }
         }
 
-        redisTemplate.delete(key);
+        redisTemplate.delete(folderKey);
         redisTemplate.opsForSet().remove("folders:" + user, folderName);
+
+        redisTemplate.delete(folderInfoKey);
 
         Path folderPath = rootLocation.resolve(Paths.get(folderName)).normalize().toAbsolutePath();
         try {
@@ -142,8 +209,10 @@ public class FileService {
         }
     }
 
+
+
     public void deleteFile(Long fileId, String folderName) {
-        String key = "folder:" + getCurrentUsername() + ":" + folderName; // Убедитесь, что ключ включает имя пользователя
+        String key = "folder:" + getCurrentUsername() + ":" + folderName;
         Set<Object> files = redisTemplate.opsForSet().members(key);
 
         if (files == null || files.isEmpty()) {
@@ -213,8 +282,8 @@ public class FileService {
     }
 
     @Transactional
-    public void deleteFileForAdminOrOwner(Long fileId, String folderName) {
-        if (!isOwner() && !isAdmin()) {
+    public void deleteFileForOwner(Long fileId, String folderName) {
+        if (!isOwner()) {
             throw new SecurityException("You do not have permission to delete this file.");
         }
         deleteFile(fileId, folderName);
@@ -227,9 +296,7 @@ public class FileService {
 
     public List<FolderInfo> getAllFoldersWithOwners() {
         Set<String> folderKeys = redisTemplate.keys("folders:*");
-
         List<FolderInfo> folderInfos = new ArrayList<>();
-
         if (folderKeys != null) {
             for (String folderKey : folderKeys) {
                 String user = folderKey.split(":")[1];
@@ -238,11 +305,13 @@ public class FileService {
                 if (folderNames != null) {
                     for (Object folderNameObj : folderNames) {
                         String folderName = folderNameObj.toString();
-                        String fileKey = "folder:" + user + ":" + folderName;
-                        Set<Object> files = redisTemplate.opsForSet().members(fileKey);
 
-                        // Добавляем информацию о папке, даже если файлов нет
-                        folderInfos.add(new FolderInfo(folderName, user));
+                        String folderEntityKey = "folder:" + user + ":" + folderName + ":info";
+                        FolderEntity folderEntity = (FolderEntity) redisTemplate.opsForValue().get(folderEntityKey);
+
+                        int accessLevel = folderEntity != null ? folderEntity.getAccessLevel() : 0;
+
+                        folderInfos.add(new FolderInfo(folderName, user, accessLevel));
                     }
                 }
             }
@@ -250,15 +319,28 @@ public class FileService {
 
         return folderInfos;
     }
+    public static String getAccessLevelString(int accessLevel) {
+        switch (accessLevel) {
+            case 1:
+                return "Public";
+            case 2:
+                return "Secret";
+            case 3:
+                return "Top Secret";
+        }
+        return null;
+    }
 
 
     public static class FolderInfo {
         private String folderName;
         private String owner;
+        private int accessLevel;
 
-        public FolderInfo(String folderName, String owner) {
+        public FolderInfo(String folderName, String owner, int accessLevel) {
             this.folderName = folderName;
             this.owner = owner;
+            this.accessLevel = accessLevel;
         }
 
         public String getFolderName() {
@@ -267,6 +349,17 @@ public class FileService {
 
         public String getOwner() {
             return owner;
+        }
+
+        public int getAccessLevel() {
+            return accessLevel;
+        }
+
+        public void setAccessLevel(int accessLevel) {
+            this.accessLevel = accessLevel;
+        }
+        public String getAccessLevelString() {
+            return FileService.getAccessLevelString(accessLevel);
         }
     }
 }

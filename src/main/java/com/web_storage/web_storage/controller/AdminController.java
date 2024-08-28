@@ -31,12 +31,15 @@ public class AdminController {
     }
 
     @PostMapping("/addUser")
-    public String addUser(@RequestParam String username, Model model) {
+    public String addUser(@RequestParam String username, @RequestParam int accessLevel, Model model) {
         String password = generateRandomPassword();
         UserEntity user = new UserEntity(username, password, Collections.singleton("ROLE_USER"));
+        user.setAccessLevel(accessLevel);
         userService.saveUser(user);
+        String accessLevelString = userService.getAccessLevelString1(accessLevel);
         model.addAttribute("username", username);
         model.addAttribute("password", password);
+        model.addAttribute("accessLevelString", accessLevelString);
         return "user_added";
     }
     @GetMapping("/users")
@@ -48,8 +51,9 @@ public class AdminController {
                 .collect(Collectors.toList());
 
         List<UserDTO> userDTOs = users.stream()
-                .map(user -> new UserDTO(user.getId(), user.getUsername(), convertRoles(user.getRoles())))
+                .map(user -> new UserDTO(user.getId(), user.getUsername(), convertRoles(user.getRoles()), convertAccessLevel(user.getAccessLevel())))
                 .collect(Collectors.toList());
+
         model.addAttribute("users", userDTOs);
         return "admin_users";
     }
@@ -78,16 +82,30 @@ public class AdminController {
                 .map(role -> Character.toUpperCase(role.charAt(0)) + role.substring(1))
                 .collect(Collectors.joining(", "));
     }
+    private String convertAccessLevel(int accessLevel) {
+        switch (accessLevel) {
+            case 1:
+                return "Public";
+            case 2:
+                return "Secret";
+            case 3:
+                return "Top Secret";
+
+        }
+        return null;
+    }
 
     public static class UserDTO {
         private Long id;
         private String username;
         private String roles;
+        private String accessLevel;
 
-        public UserDTO(Long id, String username, String roles) {
+        public UserDTO(Long id, String username, String roles, String accessLevel) {
             this.id = id;
             this.username = username;
             this.roles = roles;
+            this.accessLevel = accessLevel;
         }
 
         public Long getId() {
@@ -100,6 +118,14 @@ public class AdminController {
 
         public String getRoles() {
             return roles;
+        }
+
+        public String getAccessLevel() {
+            return accessLevel;
+        }
+
+        public void setAccessLevel(String accessLevel) {
+            this.accessLevel = accessLevel;
         }
     }
 
