@@ -10,7 +10,7 @@ public class FileEntity implements Serializable {
     private String fileName;
     private String filePath;
     private String fileType;
-    private Long fileSize;
+    private double fileSize;
 
     public FileEntity() {
     }
@@ -68,11 +68,11 @@ public class FileEntity implements Serializable {
         this.fileType = fileType;
     }
 
-    public Long getFileSize() {
+    public double getFileSize() {
         return fileSize;
     }
 
-    public void setFileSize(Long fileSize) {
+    public void setFileSize(double fileSize) {
         this.fileSize = fileSize;
     }
 

@@ -1,5 +1,6 @@
 package com.web_storage.web_storage.config;
 
+import com.web_storage.web_storage.security.CustomAuthenticationFailureHandler;
 import com.web_storage.web_storage.security.CustomAuthenticationSuccessHandler;
 import com.web_storage.web_storage.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -35,7 +36,7 @@ public class SecurityConfig {
                 .formLogin(form -> form
                         .loginPage("/login")
                         .successHandler(new CustomAuthenticationSuccessHandler())
-                        .failureUrl("/login?error=true")
+                        .failureHandler(new CustomAuthenticationFailureHandler())
                         .permitAll()
                 )
                 .logout(logout -> logout

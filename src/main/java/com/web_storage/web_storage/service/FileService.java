@@ -101,7 +101,7 @@ public class FileService {
         fileEntity.setFileName(file.getOriginalFilename());
         fileEntity.setFilePath(destinationFile.toString());
         fileEntity.setFileType(file.getContentType());
-        fileEntity.setFileSize(file.getSize() / (1024 * 1024));
+        fileEntity.setFileSize(file.getSize() / (1024.0 * 1024.0));
         fileEntity.setAccessLevel(folderEntity.getAccessLevel());
 
         String fileKey = "folder:" + folderOwner + ":" + folder;
@@ -239,12 +239,12 @@ public class FileService {
         try {
             if (Files.exists(filePath)) {
                 Files.delete(filePath);
-                System.out.println("File deleted from disk: " + filePath);
+//                System.out.println("File deleted from disk: " + filePath);
             } else {
-                System.out.println("File does not exist on disk: " + filePath);
+//                System.out.println("File does not exist on disk: " + filePath);
             }
             redisTemplate.opsForSet().remove(key, fileEntityToDelete);
-            System.out.println("File removed from Redis: " + fileEntityToDelete);
+//            System.out.println("File removed from Redis: " + fileEntityToDelete);
 
         } catch (IOException e) {
             throw new RuntimeException("Could not delete file from disk", e);

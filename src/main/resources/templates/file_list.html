@@ -11,8 +11,9 @@
 <div class="container mt-5">
     <h1 class="mb-4">Хранилище - <span th:text="${folder}"></span></h1>
 
-    <div class="card mb-4">
-        <div class="card-body">
+    <div th:if="${canUpload}">
+        <div class="card mb-4">
+            <div class="card-body">
             <h2 class="card-title">Загрузить файл</h2>
             <form method="post" enctype="multipart/form-data" th:action="@{/files/upload}">
                 <input type="hidden" name="folder" th:value="${folder}" />
@@ -22,6 +23,7 @@
                 </div>
                 <button type="submit" class="btn btn-primary">Загрузить</button>
             </form>
+            </div>
         </div>
     </div>
 
@@ -42,7 +44,7 @@
                     <p>
                         <span th:text="'Создатель: ' + ${file.user}"></span>
                     </p>
-                    <form method="post" th:action="@{/files/deleteFile}" style="display:inline;">
+                    <form th:if="${userAccessLevel == folderAccessLevel}"  th:action="@{/files/deleteFile}" method="post" style="display:inline;">
                         <input type="hidden" name="fileId" th:value="${file.id}"/>
                         <input type="hidden" name="folderName" th:value="${folder}"/>
                         <button type="submit" class="btn btn-danger btn-sm">Удалить</button>

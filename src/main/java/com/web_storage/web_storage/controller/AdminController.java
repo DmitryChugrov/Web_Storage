@@ -17,6 +17,8 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Controller
 @RequestMapping("/admin")
@@ -24,6 +26,7 @@ public class AdminController {
 
     @Autowired
     private UserService userService;
+    private static final Logger logger = LoggerFactory.getLogger(FileController.class);
 
     @GetMapping("/addUser")
     public String showAddUserForm() {
@@ -32,10 +35,12 @@ public class AdminController {
 
     @PostMapping("/addUser")
     public String addUser(@RequestParam String username, @RequestParam int accessLevel, Model model) {
+        String admin = getCurrentUsername();
         String password = generateRandomPassword();
         UserEntity user = new UserEntity(username, password, Collections.singleton("ROLE_USER"));
         user.setAccessLevel(accessLevel);
         userService.saveUser(user);
+        logger.info("Администратор '{}' создал пользователя '{}' ",admin, user);
         String accessLevelString = userService.getAccessLevelString1(accessLevel);
         model.addAttribute("username", username);
         model.addAttribute("password", password);
@@ -60,14 +65,44 @@ public class AdminController {
 
     @PostMapping("/deleteUser")
     public String deleteUser(@RequestParam Long userId, Authentication authentication) {
+        String admin = getCurrentUsername();
         UserEntity userToDelete = userService.findUserById(userId);
+        String user = userToDelete.getUsername();
         if (userToDelete != null && userToDelete.getRoles().contains("ROLE_USER")) {
             String currentUsername = ((UserDetails) authentication.getPrincipal()).getUsername();
             if (!userToDelete.getUsername().equals(currentUsername)) {
                 userService.deleteUser(userId);
+                logger.info("Администратор '{}' удалил пользователя '{}' ", admin, user);
             }
         }
         return "redirect:/admin/users";
+    }
+    @GetMapping("/changeAccessLevel")
+    public String showChangeAccessLevelForm(@RequestParam Long userId, Model model) {
+        UserEntity user = userService.findUserById(userId);
+        if (user != null) {
+            UserDTO userDTO = new UserDTO(user.getId(), user.getUsername(), convertRoles(user.getRoles()), convertAccessLevel(user.getAccessLevel()));
+            model.addAttribute("user", userDTO);
+            return "change_access_level";
+        } else {
+            return "redirect:/admin/users";
+        }
+    }
+
+    @PostMapping("/changeAccessLevel")
+    public String changeAccessLevel(@RequestParam Long userId, @RequestParam int newAccessLevel, Model model) {
+        String admin = getCurrentUsername();
+        UserEntity user = userService.findUserById(userId);
+        String username = user.getUsername();
+        if (user != null) {
+            userService.updateAccessLevel(userId, newAccessLevel);
+            logger.info("Администратор '{}' изменил уровень доступа пользователя '{}' на '{}'", admin, username, newAccessLevel);
+            model.addAttribute("message", "Уровень доступа успешно изменён");
+        } else {
+            logger.error("Администратор '{}' не смог изменить уровень доступа пользователя '{}' на '{}'", admin, username, newAccessLevel);
+            model.addAttribute("error", "Пользователь не найден");
+        }
+        return "change_access_level_result";
     }
 
     private String getCurrentUsername() {

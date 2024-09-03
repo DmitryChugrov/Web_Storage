@@ -136,4 +136,20 @@ public class UserService implements UserDetailsService {
         }
         return null;
     }
+    public boolean changePassword(String username, String oldPassword, String newPassword) {
+        UserEntity currentUser = findByUsername(username);
+        if (currentUser != null && passwordEncoder.matches(oldPassword, currentUser.getPassword())) {
+            currentUser.setPassword(passwordEncoder.encode(newPassword));
+            redisTemplate.opsForHash().put(USER_HASH_KEY, username, currentUser);
+            return true;
+        }
+        return false;
+    }
+    public void updateAccessLevel(Long userId, int newAccessLevel) {
+        UserEntity user = findUserById(userId);
+        if (user != null) {
+            user.setAccessLevel(newAccessLevel);
+            redisTemplate.opsForHash().put(USER_HASH_KEY, user.getUsername(), user);
+        }
+    }
 }

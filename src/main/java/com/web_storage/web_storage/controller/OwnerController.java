@@ -19,6 +19,8 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import static com.web_storage.web_storage.service.FileService.getAccessLevelString;
 
@@ -30,6 +32,7 @@ public class OwnerController {
     private UserService userService;
     @Autowired
     private FileService fileService;
+    private static final Logger logger = LoggerFactory.getLogger(OwnerController.class);
 
     @GetMapping("/addAdmin")
     public String showAddAdminForm() {
@@ -38,10 +41,12 @@ public class OwnerController {
 
     @PostMapping("/addAdmin")
     public String addAdmin(@RequestParam String username, Model model) {
+        String currentUser = getCurrentUsername();
         String password = generateRandomPassword();
         UserEntity admin = new UserEntity(username, password, Collections.singleton("ROLE_ADMIN"));
         admin.setAccessLevel(3);
         userService.saveUser(admin);
+        logger.info("Владелец '{}' создал администратора '{}' ", currentUser, admin);
         model.addAttribute("username", username);
         model.addAttribute("password", password);
         return "admin_added";
@@ -61,7 +66,6 @@ public class OwnerController {
         int accessLevel = folderEntity != null ? folderEntity.getAccessLevel() : 0;
 
         if (currentUser.equals(owner) || accessLevel > 0) {
-//            -----------------------------------------------------
             List<FileEntity> files = fileService.getFilesByUserAndFolder(owner, folder);
             List<FileController.FileDTO> fileDTOs = files.stream()
                     .map(file -> new FileController.FileDTO(file.getId(), file.getFileName(), file.getFileSize(),
@@ -92,9 +96,14 @@ public class OwnerController {
     }
     @PostMapping("/assignAdmin")
     public String assignAdmin(@RequestParam Long userId, Authentication authentication) {
+        String owner = getCurrentUsername();
+        UserEntity user = userService.findUserById(userId);
+        String username = user.getUsername();
         if (userService.hasTopSecretAccess(authentication)) {
             userService.assignAdminRole(userId);
+            logger.info("Владелец '{}' назначил пользователя '{}' администратором", owner, username);
         } else {
+            logger.error("Владелец '{}' не смог назначил пользователя '{}' администратором", owner, username);
             return "redirect:/error/unauthorized";
         }
         return "redirect:/owner/users";
@@ -102,9 +111,14 @@ public class OwnerController {
 
     @PostMapping("/revokeAdmin")
     public String revokeAdmin(@RequestParam Long userId, Authentication authentication) {
+        String owner = getCurrentUsername();
+        UserEntity user = userService.findUserById(userId);
+        String username = user.getUsername();
         if (userService.hasTopSecretAccess(authentication)) {
             userService.revokeAdminRole(userId);
+            logger.info("Владелец '{}' снял роль администратора с пользователя '{}'", owner, username);
         } else {
+            logger.error("Владелец '{}' не смог снять роль администратора с '{}'", owner, username);
             return "redirect:/error/unauthorized";
         }
         return "redirect:/owner/users";
@@ -114,18 +128,25 @@ public class OwnerController {
         String user = getCurrentUsername();
         try {
             fileService.saveFile(folderOwner, file, folder);
+            logger.info("Владелец '{}' загрузил файл '{}' в папку '{}'", user, file.getOriginalFilename(), folder);
         } catch (IOException e) {
-            e.printStackTrace();
+            logger.error("Ошибка при загрузке файла '{}' владельцем: {}", file.getOriginalFilename(), e.getMessage());
         }
         return "redirect:/owner/folders/" + folderOwner + "/" + folder;
     }
     @PostMapping("/deleteUser")
     public String deleteUser(@RequestParam Long userId) {
+        String owner = getCurrentUsername();
+        UserEntity user = userService.findUserById(userId);
+        String username = user.getUsername();
+        logger.info("Владелец '{}' удалил пользователя '{}'", owner, username);
         userService.deleteUser(userId);
         return "redirect:/owner/users";
     }
     @PostMapping("/deleteFile")
     public String deleteFile(@RequestParam Long fileId,@RequestParam("owner") String folderOwner, @RequestParam("folder") String folder, @RequestParam String folderName, Model model) {
+
+            logger.info("Владелец удалил файл с id = '{}' в папке '{}'", fileId, folder);
             fileService.deleteFileForOwner(fileId, folderName);
             return "redirect:/owner/folders/" +   folderOwner + "/" + folder;
     }
@@ -133,6 +154,7 @@ public class OwnerController {
     @PostMapping("/deleteFolder")
     public String deleteFolder(@RequestParam String folderOwner,@RequestParam String folderName, Model model) {
         String currentUser = getCurrentUsername();
+        logger.info("Владелец удалил папку '{}'", folderName);
             fileService.deleteFolderForOwner(folderOwner,folderName);
             return "redirect:/owner/folders";
     }

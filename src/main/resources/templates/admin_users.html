@@ -20,6 +20,7 @@
                         <input type="hidden" name="userId" th:value="${user.id}"/>
                         <button type="submit" class="btn btn-danger btn-sm">Удалить</button>
                     </form>
+                    <a th:href="@{/admin/changeAccessLevel(userId=${user.id})}" th:if="${user.roles.contains('User')}" class="btn btn-warning btn-sm ml-2">Изменить уровень доступа</a>
                 </li>
             </ul>
         </div>

@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Изменение уровня доступа</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+</head>
+<body>
+<div class="container mt-5">
+    <h1 class="mb-4">Изменение уровня доступа для <span th:text="${user.username}"></span></h1>
+    <form method="post" th:action="@{/admin/changeAccessLevel(userId=${user.id})}">
+        <div class="form-group">
+            <label for="newAccessLevel">Выберите новый уровень доступа</label>
+            <select id="newAccessLevel" name="newAccessLevel" class="form-control" required>
+                <option value="1">Public</option>
+                <option value="2">Secret</option>
+                <option value="3">Top Secret</option>
+            </select>
+        </div>
+        <button type="submit" class="btn btn-primary">Изменить уровень доступа</button>
+    </form>
+    <a class="btn btn-secondary" th:href="@{/admin/users}">Назад</a>
+</div>
+</body>
+</html>

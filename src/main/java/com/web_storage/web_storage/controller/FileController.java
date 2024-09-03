@@ -23,12 +23,15 @@ import java.nio.file.Path;
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import static com.web_storage.web_storage.service.FileService.getAccessLevelString;
 
 @Controller
 @RequestMapping("/files")
 public class FileController {
+    private static final Logger logger = LoggerFactory.getLogger(FileController.class);
 
     @Autowired
     private FileService fileService;
@@ -55,23 +58,42 @@ public class FileController {
     }
 
     private String listFiles(Model model, String user, String folder) {
+        String currentUser = getCurrentUsername();
+
+        FolderEntity folderEntity = fileService.getFolderEntity(user, folder);
+        int folderAccessLevel = folderEntity != null ? folderEntity.getAccessLevel() : 0;
+
+        UserEntity currentUserEntity = userService.findByUsername(currentUser);
+        int userAccessLevel = currentUserEntity != null ? currentUserEntity.getAccessLevel() : 0;
+        boolean canUpload = (userAccessLevel == folderAccessLevel) || (userAccessLevel == 2 && folderAccessLevel == 3);
+
         List<FileEntity> files = fileService.getFilesByUserAndFolder(user, folder);
         if (files.isEmpty()) {
             model.addAttribute("message", "Папка пуста");
         }
-        model.addAttribute("files", files);
-        model.addAttribute("user", user);
+        List<FileDTO> fileDTOs = files.stream()
+                .map(file -> new FileDTO(file.getId(), file.getFileName(), file.getFileSize(),
+                        getAccessLevelString(file.getAccessLevel()), file.getUser()))
+                .collect(Collectors.toList());
+
+        model.addAttribute("files", fileDTOs);
         model.addAttribute("folder", folder);
+        model.addAttribute("user", user);
+        model.addAttribute("canUpload", canUpload);
+        model.addAttribute("userAccessLevel", userAccessLevel);
+        model.addAttribute("folderAccessLevel", folderAccessLevel);
         return "file_list";
     }
 
     @PostMapping("/upload")
     public String uploadFile(@RequestParam("file") MultipartFile file, @RequestParam("folder") String folder, @RequestParam("owner") String folderOwner, Model model) {
         String user = getCurrentUsername();
+        logger.info("Пользователь '{}' пытается загрузить файл '{}' в папку '{}'", user, file.getOriginalFilename(), folder);
         try {
             fileService.saveFile(folderOwner, file, folder);
+            logger.info("Пользователь '{}' загрузил файл '{}' в папку '{}'", user, file.getOriginalFilename(), folder);
         } catch (IOException e) {
-            e.printStackTrace();
+            logger.error("Ошибка при загрузке файла '{}': {}", file.getOriginalFilename(), e.getMessage());
         }
         return "redirect:/files/folders/" + folderOwner + "/" + folder;
     }
@@ -79,14 +101,17 @@ public class FileController {
     @PostMapping("/folders/deleteOtherFolder")
     public String deleteOtherFolder(@RequestParam String folderOwner,@RequestParam String folderName, Model model) {
         String currentUser = getCurrentUsername();
+        logger.info("Пользователь '{}' пытается удалить папку '{}'", currentUser, folderName);
         FolderEntity folderEntity = fileService.getFolderEntity(folderOwner, folderName);
         int folderAccessLevel = folderEntity != null ? folderEntity.getAccessLevel() : 0;
         UserEntity currentUserEntity = userService.findByUsername(currentUser);
         int userAccessLevel = currentUserEntity != null ? currentUserEntity.getAccessLevel() : 0;
         if (folderAccessLevel == userAccessLevel){
             fileService.deleteFolder(folderOwner,folderName);
+            logger.info("Пользователь '{}' удалил папку '{}' с уровнем доступа '{}'", currentUser, folderName, folderAccessLevel);
             return "redirect:/files/folders";
-        }else return "access_denied";
+        }else logger.info("Пользователь '{}' с уровнем доступа '{}' не может удалить папку '{}' с уровнем доступа '{}'", currentUser, userAccessLevel, folderName, folderAccessLevel);
+        return "accessFolder_denied";
 
     }
     @GetMapping("/folders")
@@ -148,14 +173,17 @@ public class FileController {
     @PostMapping("/folders/deleteFile")
     public String deleteFileInOtherFolder(@RequestParam Long fileId, @RequestParam String folder, @RequestParam("owner") String folderOwner, Authentication authentication) throws Throwable {
         String currentUser = getCurrentUsername();
+        logger.info("Пользователь '{}' пытается удалить файл с id = '{}' в папке '{}'", currentUser, fileId, folder);
         FolderEntity folderEntity = fileService.getFolderEntity(folderOwner, folder);
         int folderAccessLevel = folderEntity != null ? folderEntity.getAccessLevel() : 0;
         UserEntity currentUserEntity = userService.findByUsername(currentUser);
         int userAccessLevel = currentUserEntity != null ? currentUserEntity.getAccessLevel() : 0;
         if (folderAccessLevel == userAccessLevel){
             fileService.deleteFile(fileId, folder);
+            logger.info("Пользователь '{}' удалил файл с id = '{}' с уровнем доступа '{}' в папке '{}'", currentUser, fileId, folderAccessLevel, folder);
             return "redirect:/files/folders/" + folderOwner + "/" + folder;
-        }else return "access_denied";
+        }else logger.info("Пользователь '{}' с уровнем доступа '{}' не может удалить файл с id = '{}' с уровнем доступа '{}' в папке '{}'", currentUser, userAccessLevel, fileId, folderAccessLevel, folder);
+        return "access_denied";
     }
 
 
@@ -200,13 +228,16 @@ public class FileController {
     @PostMapping("/createFolder")
     public String createFolder(@RequestParam("folderName") String folderName) {
         String user = getCurrentUsername();
+        logger.info("Пользователь '{}' пытается создать папку '{}'", user, folderName);
         fileService.createFolder(user, folderName);
+        logger.info("Пользователь '{}' создал папку '{}'", user, folderName);
         return "redirect:/files";
     }
 
     @PostMapping("/deleteFolder")
     public String deleteFolder(@RequestParam String folderName, Authentication authentication, Model model) {
         String currentUsername = ((UserDetails) authentication.getPrincipal()).getUsername();
+        logger.info("Пользователь '{}' пытается удалить папку '{}'", currentUsername, folderName);
         FolderEntity folderEntity = fileService.getFolderEntity(currentUsername, folderName);
 
         if (folderEntity == null) {
@@ -218,17 +249,29 @@ public class FileController {
 
         if (userAccessLevel == folderEntity.getAccessLevel()) {
             fileService.deleteFolder(currentUsername, folderName);
+            logger.info("Пользователь '{}' удалил папку '{}' с уровнем доступа '{}'", currentUsername, folderName, folderEntity.getAccessLevel());
             return "redirect:/files";
         } else {
             model.addAttribute("error", "У вас недостаточно прав для удаления этой папки.");
-            return "redirect:/files";
+       logger.info("Пользователь '{}' с уровнем доступа '{}' не может удалить папку '{}' с уровнем доступа '{}'", currentUsername, userAccessLevel, folderName, folderEntity.getAccessLevel());
+        return "accessFolder_denied";
         }
     }
 
     @PostMapping("/deleteFile")
     public String deleteFile(@RequestParam Long fileId, @RequestParam String folderName, Authentication authentication) throws Throwable {
-        fileService.deleteFile(fileId, folderName);
-        return "redirect:/files?folder=" + folderName;
+        String currentUser = getCurrentUsername();
+        logger.info("Пользователь '{}' пытается удалить файл с id = '{}' в папке '{}'", currentUser, fileId, folderName);
+        FolderEntity folderEntity = fileService.getFolderEntity(currentUser, folderName);
+        int folderAccessLevel = folderEntity != null ? folderEntity.getAccessLevel() : 0;
+        UserEntity currentUserEntity = userService.findByUsername(currentUser);
+        int userAccessLevel = currentUserEntity != null ? currentUserEntity.getAccessLevel() : 0;
+        if (folderAccessLevel == userAccessLevel){
+            fileService.deleteFile(fileId, folderName);
+            logger.info("Пользователь '{}' удалил файл с id = '{}' с уровнем доступа '{}' в папке '{}'", currentUser, fileId, folderAccessLevel, folderName);
+            return "redirect:/files?folder=" + folderName;
+        }else logger.info("Пользователь '{}' с уровнем доступа '{}' не может удалить файл с id = '{}' с уровнем доступа '{}' в папке '{}'", currentUser, userAccessLevel, fileId, folderAccessLevel, folderName);
+        return "access_denied";
     }
     @GetMapping("/download/{fileId}")
     public ResponseEntity<Resource> downloadFile(@PathVariable Long fileId,
@@ -237,12 +280,16 @@ public class FileController {
         try {
             Path filePath = fileService.getFilePath(fileId, owner, folder);
             Resource resource = new UrlResource(filePath.toUri());
+            logger.info("Пользователь '{}' скачивает файл '{}', созданный '{}', из папки '{}'",
+                    SecurityContextHolder.getContext().getAuthentication().getName(),
+                    resource.getFilename(), owner, folder);
 
             return ResponseEntity.ok()
                     .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + new String(resource.getFilename().getBytes("UTF-8"), "ISO-8859-1") + "\"")
                     .header(HttpHeaders.CONTENT_TYPE, "application/octet-stream; charset=UTF-8")
                     .body(resource);
         } catch (IOException e) {
+            logger.error("Произошла ошибка в процессе скачивания файла '{}': {}", fileId, e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
         }
     }
