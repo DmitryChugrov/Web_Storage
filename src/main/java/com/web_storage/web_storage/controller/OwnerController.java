@@ -129,10 +129,12 @@ public class OwnerController {
         try {
             fileService.saveFile(folderOwner, file, folder);
             logger.info("Владелец '{}' загрузил файл '{}' в папку '{}'", user, file.getOriginalFilename(), folder);
+            model.addAttribute("message", "Файл успешно загружен в хранилище");
         } catch (IOException e) {
             logger.error("Ошибка при загрузке файла '{}' владельцем: {}", file.getOriginalFilename(), e.getMessage());
+            model.addAttribute("error", "Произошла непредвиденная ошибка");
         }
-        return "redirect:/owner/folders/" + folderOwner + "/" + folder;
+        return "upload_result";
     }
     @PostMapping("/deleteUser")
     public String deleteUser(@RequestParam Long userId) {
@@ -145,10 +147,10 @@ public class OwnerController {
     }
     @PostMapping("/deleteFile")
     public String deleteFile(@RequestParam Long fileId,@RequestParam("owner") String folderOwner, @RequestParam("folder") String folder, @RequestParam String folderName, Model model) {
-
             logger.info("Владелец удалил файл с id = '{}' в папке '{}'", fileId, folder);
             fileService.deleteFileForOwner(fileId, folderName);
-            return "redirect:/owner/folders/" +   folderOwner + "/" + folder;
+            model.addAttribute("message", "Файл успешно удален из хранилище");
+            return "delete_result";
     }
 
     @PostMapping("/deleteFolder")

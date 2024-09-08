@@ -101,7 +101,12 @@ public class FileService {
         fileEntity.setFileName(file.getOriginalFilename());
         fileEntity.setFilePath(destinationFile.toString());
         fileEntity.setFileType(file.getContentType());
-        fileEntity.setFileSize(file.getSize() / (1024.0 * 1024.0));
+
+        double fileSizeInMB = file.getSize() / (1024.0 * 1024.0);
+        double roundedFileSize = Math.round(fileSizeInMB * 100.0) / 100.0;
+
+        fileEntity.setFileSize(roundedFileSize);
+
         fileEntity.setAccessLevel(folderEntity.getAccessLevel());
 
         String fileKey = "folder:" + folderOwner + ":" + folder;

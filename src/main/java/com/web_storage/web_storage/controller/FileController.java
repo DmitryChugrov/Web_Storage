@@ -92,10 +92,12 @@ public class FileController {
         try {
             fileService.saveFile(folderOwner, file, folder);
             logger.info("Пользователь '{}' загрузил файл '{}' в папку '{}'", user, file.getOriginalFilename(), folder);
+            model.addAttribute("message", "Файл успешно загружен в хранилище");
         } catch (IOException e) {
             logger.error("Ошибка при загрузке файла '{}': {}", file.getOriginalFilename(), e.getMessage());
+            model.addAttribute("error", "Произошла непредвиденная ошибка");
         }
-        return "redirect:/files/folders/" + folderOwner + "/" + folder;
+        return "upload_result";
     }
 
     @PostMapping("/folders/deleteOtherFolder")
@@ -109,7 +111,8 @@ public class FileController {
         if (folderAccessLevel == userAccessLevel){
             fileService.deleteFolder(folderOwner,folderName);
             logger.info("Пользователь '{}' удалил папку '{}' с уровнем доступа '{}'", currentUser, folderName, folderAccessLevel);
-            return "redirect:/files/folders";
+            model.addAttribute("message", "Файл успешно удален в хранилище");
+            return "delete_result";
         }else logger.info("Пользователь '{}' с уровнем доступа '{}' не может удалить папку '{}' с уровнем доступа '{}'", currentUser, userAccessLevel, folderName, folderAccessLevel);
         return "accessFolder_denied";
 
@@ -171,7 +174,7 @@ public class FileController {
     }
 
     @PostMapping("/folders/deleteFile")
-    public String deleteFileInOtherFolder(@RequestParam Long fileId, @RequestParam String folder, @RequestParam("owner") String folderOwner, Authentication authentication) throws Throwable {
+    public String deleteFileInOtherFolder(@RequestParam Long fileId, @RequestParam String folder, @RequestParam("owner") String folderOwner, Authentication authentication, Model model) throws Throwable {
         String currentUser = getCurrentUsername();
         logger.info("Пользователь '{}' пытается удалить файл с id = '{}' в папке '{}'", currentUser, fileId, folder);
         FolderEntity folderEntity = fileService.getFolderEntity(folderOwner, folder);
@@ -181,7 +184,8 @@ public class FileController {
         if (folderAccessLevel == userAccessLevel){
             fileService.deleteFile(fileId, folder);
             logger.info("Пользователь '{}' удалил файл с id = '{}' с уровнем доступа '{}' в папке '{}'", currentUser, fileId, folderAccessLevel, folder);
-            return "redirect:/files/folders/" + folderOwner + "/" + folder;
+            model.addAttribute("message", "Файл успешно удален в хранилище");
+            return "delete_result";
         }else logger.info("Пользователь '{}' с уровнем доступа '{}' не может удалить файл с id = '{}' с уровнем доступа '{}' в папке '{}'", currentUser, userAccessLevel, fileId, folderAccessLevel, folder);
         return "access_denied";
     }
@@ -259,7 +263,7 @@ public class FileController {
     }
 
     @PostMapping("/deleteFile")
-    public String deleteFile(@RequestParam Long fileId, @RequestParam String folderName, Authentication authentication) throws Throwable {
+    public String deleteFile(@RequestParam Long fileId, @RequestParam String folderName, Authentication authentication, Model model) throws Throwable {
         String currentUser = getCurrentUsername();
         logger.info("Пользователь '{}' пытается удалить файл с id = '{}' в папке '{}'", currentUser, fileId, folderName);
         FolderEntity folderEntity = fileService.getFolderEntity(currentUser, folderName);
@@ -269,7 +273,8 @@ public class FileController {
         if (folderAccessLevel == userAccessLevel){
             fileService.deleteFile(fileId, folderName);
             logger.info("Пользователь '{}' удалил файл с id = '{}' с уровнем доступа '{}' в папке '{}'", currentUser, fileId, folderAccessLevel, folderName);
-            return "redirect:/files?folder=" + folderName;
+            model.addAttribute("message", "Файл успешно удален в хранилище");
+            return "delete_result";
         }else logger.info("Пользователь '{}' с уровнем доступа '{}' не может удалить файл с id = '{}' с уровнем доступа '{}' в папке '{}'", currentUser, userAccessLevel, fileId, folderAccessLevel, folderName);
         return "access_denied";
     }
