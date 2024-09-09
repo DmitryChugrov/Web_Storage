@@ -4,6 +4,7 @@ import com.web_storage.web_storage.model.FileEntity;
 import com.web_storage.web_storage.model.FolderEntity;
 import com.web_storage.web_storage.model.UserEntity;
 import com.web_storage.web_storage.service.FileService;
+import com.web_storage.web_storage.service.PasswordGeneratorService;
 import com.web_storage.web_storage.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.Authentication;
@@ -27,7 +28,8 @@ import static com.web_storage.web_storage.service.FileService.getAccessLevelStri
 @Controller
 @RequestMapping("/owner")
 public class OwnerController {
-
+    @Autowired
+    private PasswordGeneratorService passwordGeneratorService;
     @Autowired
     private UserService userService;
     @Autowired
@@ -220,6 +222,7 @@ public class OwnerController {
         }
     }
     private String generateRandomPassword() {
-        return "1111";
+        String password = passwordGeneratorService.generateRandomPassword(8,16);
+        return password;
     }
 }

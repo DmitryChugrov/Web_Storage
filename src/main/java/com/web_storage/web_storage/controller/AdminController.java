@@ -1,6 +1,7 @@
 package com.web_storage.web_storage.controller;
 
 import com.web_storage.web_storage.model.UserEntity;
+import com.web_storage.web_storage.service.PasswordGeneratorService;
 import com.web_storage.web_storage.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.Authentication;
@@ -24,6 +25,8 @@ import org.slf4j.LoggerFactory;
 @RequestMapping("/admin")
 public class AdminController {
 
+    @Autowired
+    private PasswordGeneratorService passwordGeneratorService;
     @Autowired
     private UserService userService;
     private static final Logger logger = LoggerFactory.getLogger(FileController.class);
@@ -166,8 +169,8 @@ public class AdminController {
 
 
     private String generateRandomPassword() {
-        // Implement password generation logic
-        return "1111";
+        String password = passwordGeneratorService.generateRandomPassword(8,16);
+        return password;
     }
 }
 
