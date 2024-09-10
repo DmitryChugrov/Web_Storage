@@ -65,13 +65,23 @@ public class FileController {
 
         UserEntity currentUserEntity = userService.findByUsername(currentUser);
         int userAccessLevel = currentUserEntity != null ? currentUserEntity.getAccessLevel() : 0;
-        boolean canUpload = (userAccessLevel == folderAccessLevel) || (userAccessLevel == 2 && folderAccessLevel == 3);
+
+        boolean canUpload = false;
+        if (userAccessLevel == 1 && (folderAccessLevel == 1 || folderAccessLevel == 2)) {
+            canUpload = true; 
+        } else if (userAccessLevel == 2 && (folderAccessLevel == 2 || folderAccessLevel == 3)) {
+            canUpload = true;
+        } else if (userAccessLevel == 3 && folderAccessLevel == 3) {
+            canUpload = true; 
+        }
 
         List<FileEntity> files = fileService.getFilesByUserAndFolder(user, folder);
         if (files.isEmpty()) {
             model.addAttribute("message", "Папка пуста");
         }
+        
         List<FileDTO> fileDTOs = files.stream()
+                .filter(file -> file.getAccessLevel() <= userAccessLevel) 
                 .map(file -> new FileDTO(file.getId(), file.getFileName(), file.getFileSize(),
                         getAccessLevelString(file.getAccessLevel()), file.getUser()))
                 .collect(Collectors.toList());
@@ -154,10 +164,19 @@ public class FileController {
 
         UserEntity currentUserEntity = userService.findByUsername(currentUser);
         int userAccessLevel = currentUserEntity != null ? currentUserEntity.getAccessLevel() : 0;
-        boolean canUpload = (userAccessLevel == folderAccessLevel) || (userAccessLevel == 2 && folderAccessLevel == 3);
 
-        List<FileEntity> files = fileService.getFilesByUserAndFolder(owner, folder);
-        List<FileDTO> fileDTOs = files.stream()
+        boolean canUpload = false;
+        if (userAccessLevel == 1 && (folderAccessLevel == 1 || folderAccessLevel == 2)) {
+            canUpload = true;
+        } else if (userAccessLevel == 2 && (folderAccessLevel == 2 || folderAccessLevel == 3)) {
+            canUpload = true;
+        } else if (userAccessLevel == 3 && folderAccessLevel == 3) {
+            canUpload = true;
+        }
+
+        List<FileEntity> allFiles = fileService.getFilesByUserAndFolder(owner, folder);
+        List<FileDTO> fileDTOs = allFiles.stream()
+                .filter(file -> file.getAccessLevel() <= userAccessLevel)
                 .map(file -> new FileDTO(file.getId(), file.getFileName(), file.getFileSize(),
                         getAccessLevelString(file.getAccessLevel()), file.getUser()))
                 .collect(Collectors.toList());
@@ -172,7 +191,6 @@ public class FileController {
 
         return "other_files";
     }
-
     @PostMapping("/folders/deleteFile")
     public String deleteFileInOtherFolder(@RequestParam Long fileId, @RequestParam String folder, @RequestParam("owner") String folderOwner, Authentication authentication, Model model) throws Throwable {
         String currentUser = getCurrentUsername();
